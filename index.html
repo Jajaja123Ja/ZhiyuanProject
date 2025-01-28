@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Table with Edit/Delete Buttons</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .logo-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 50vh;
+            text-align: center;
+        }
+        img {
+            height: 260px;
+            width: 260px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #000; 
+            text-align: center; 
+            padding: 8px; 
+        }
+        th {
+            background-color: #d4958b;
+            font-weight: bold;
+        }
+        button {
+            padding: 5px 10px;
+            margin: 0 2px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .edit-btn {
+            background-color: #4CAF50; 
+            color: white;
+        }
+        .delete-btn {
+            background-color: #f44336; 
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="logo-container">
+        <h1>Zhiyuan Inventory Management</h1>
+        <img src="IMAGES/zhiyuan.jpg" alt="Zhiyuan Logo">
+    </div>
+    <table>
+        <tr>
+            <th>CODE</th>
+            <th>CATEGORY</th>
+            <th>BRAND</th>
+            <th>PRODUCT NAME</th>
+            <th>TIP SIZE</th>
+            <th>PRICE</th>
+            <th>IN (DELIVERY)</th>
+            <th>IN (RTS)</th>
+            <th>OUT (SALE)</th>
+            <th>ENDING STOCK</th>
+            <th>STATUS</th>
+            <th>ACTIONS</th> 
+        </tr>
+        <tr>
+            <td>BLMGC-SD-0001</td>
+            <td>PLAYING CUE</td>
+            <td>S-DIAMOND</td>
+            <td>PRODUCT NAME</td>
+            <td>12.5 MM</td>
+            <td>P1,100</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td>0</td>
+            <td>RESTOCK</td>
+            <td>
+                <button class="edit-btn">Edit</button>
+                <button class="delete-btn">Delete</button>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
