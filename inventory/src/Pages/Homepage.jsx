@@ -55,7 +55,7 @@ const Homepage = () => {
                     }}
                 >
                     <Typography
-                        variant="h1"
+                        variant="h2"
                         component="h1"
                         sx={{
                             fontWeight: 'bold',
@@ -64,19 +64,19 @@ const Homepage = () => {
                             textShadow: '2px 2px 8px rgba(0, 0, 0, 0.5)',
                         }}
                     >
-                        DO NOT TOUCH THE CODE 
-                        {/* Explore Quality Products Across Sports and Beauty */}
+                        {/* DO NOT TOUCH THE CODE  */}
+                        Explore Quality Products Across Sports and Beauty
                     </Typography>
                     <Typography
-                        variant="h1"
+                        variant="h4"
                         component="h2"
                         sx={{
                             color: '#362a16', // Same white for consistency
                             textShadow: '2px 2px 8px rgba(0, 0, 0, 0.5)',
                         }}
                     >
-                        THANK YOU!!!!!!!!!!!!!!!!!
-                        {/* Your Trusted Source for Premium Imports */}
+                        {/* THANK YOU!!!!!!!!!!!!!!!!! */}
+                        Your Trusted Source for Premium Imports
                     </Typography>
 
                 </Box>

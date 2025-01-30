@@ -26,6 +26,8 @@ import AddIcon from '@mui/icons-material/Add';
 import { useAuthContext } from "../hooks/useAuthContext";
 import Navbar from "../Components/Navbar";
 import ConfirmDeleteMaterialModal from "../Components/ConfirmDeleteMaterialModal";
+import HeroImage from "../assets/zhiyuan.jpg"
+import { green } from '@mui/material/colors';
 
 const validUnits = [
   'lot', 'cu.m', 'bags', 'pcs', 'shts', 'kgs', 'gal', 'liters',
@@ -56,13 +58,28 @@ const Materials = () => {
         const fakeData = [
             { CODE: 'BLMGC-SD-0001', CATEGORY: 'PLAYING CUE', BRAND: 'S-DIAMOND', PRODUCTNAME: 'S-DIAMOND RED', TIPSIZE: '12.5 MM', PRICE: 'P1,100', OPENINGSTOCK: 0, INDEV: 0, INRTS: 0, INYUANR: 0, OS: 0, YUANDMG: 0, FREEBIES: 0, ES: 0, STATUS: 'RESTOCK' },
             { CODE: 'BLMGC-SD-0002', CATEGORY: 'PLAYING CUE', BRAND: '', PRODUCTNAME: 'S-DIAMOND WHITE', TIPSIZE: '12.5 MM', PRICE: 'P1,100', OPENINGSTOCK: 1, INDEV: 0, INRTS: 0, INYUANR: 0, OS: 0, YUANDMG: 0, FREEBIES: 0, ES: 1, STATUS: 'RESTOCK' },
+            { CODE: 'BLMGC-SD-0003', CATEGORY: 'PLAYING CUE', BRAND: '', PRODUCTNAME: 'S-DIAMOND BLUE', TIPSIZE: '12.5 MM', PRICE: 'P1,100', OPENINGSTOCK: 1, INDEV: 0, INRTS: 0, INYUANR: 0, OS: 0, YUANDMG: 0, FREEBIES: 0, ES: 1, STATUS: 'OK' },
+            { CODE: 'BLMGC-SD-0004', CATEGORY: 'PLAYING CUE', BRAND: '', PRODUCTNAME: 'S-DIAMOND GREEN', TIPSIZE: '12.5 MM', PRICE: 'P1,100', OPENINGSTOCK: 4, INDEV: 0, INRTS: 0, INYUANR: 0, OS: 0,YUANDMG: 0, FREEBIES: 0, ES: 4, STATUS: 'RESTOCK' },
+            { CODE: 'BLMGC-SC0R-0001', CATEGORY: 'PLAYING CUE', BRAND: 'SCORPION', PRODUCTNAME: 'SC01-RED WINE', TIPSIZE: '11.5 MM', PRICE: 'P1,300', OPENINGSTOCK: 0, INDEV: 0, INRTS: 0, INYUANR: 0, OS: 0, YUANDMG: 0, FREEBIES: 0, ES: 0, STATUS: 'OK' },
+            { CODE: 'BLMGC-SC0R-0002', CATEGORY: 'PLAYING CUE', BRAND: '', PRODUCTNAME: 'SC01-RED WINE', TIPSIZE: '12.5 MM', PRICE: 'P1,300', OPENINGSTOCK: 0, INDEV: 0, INRTS: 0, INYUANR: 0, OS: 0, YUANDMG: 0, FREEBIES: 0, ES: 0, STATUS: 'RESTOCK' },
+            { CODE: 'BLMGC-SC0R-0003', CATEGORY: 'PLAYING CUE', BRAND: '', PRODUCTNAME: 'SC02-TOASTED PEACAN', TIPSIZE: '11.5 MM', PRICE: 'P1,300', OPENINGSTOCK: 0, INDEV: 0, INRTS: 0, INYUANR: 0,OS: 0, YUANDMG: 0, FREEBIES: 0, ES: 0, STATUS: 'OK' },
+            { CODE: 'BLMGC-SC0R-0004', CATEGORY: 'PLAYING CUE', BRAND: '', PRODUCTNAME: 'SC02-TOASTED PEACAN', TIPSIZE: '12.5 MM', PRICE: 'P1,300', OPENINGSTOCK: 0, INDEV: 0, INRTS: 0, INYUANR: 0, OS: 0,YUANDMG: 0, FREEBIES: 0,ES: 0, STATUS: 'RESTOCK' },
+            { CODE: 'BLMGC-SD-0001', CATEGORY: 'PLAYING CUE', BRAND: 'S-DIAMOND', PRODUCTNAME: 'S-DIAMOND RED', TIPSIZE: '12.5 MM', PRICE: 'P1,100', OPENINGSTOCK: 0, INDEV: 0, INRTS: 0, INYUANR: 0, OS: 0, YUANDMG: 0, FREEBIES: 0, ES: 0, STATUS: 'OK' },
+            { CODE: 'BLMGC-SD-0002', CATEGORY: 'PLAYING CUE', BRAND: '', PRODUCTNAME: 'S-DIAMOND WHITE', TIPSIZE: '12.5 MM', PRICE: 'P1,100', OPENINGSTOCK: 1, INDEV: 0, INRTS: 0, INYUANR: 0, OS: 0, YUANDMG: 0, FREEBIES: 0, ES: 1, STATUS: 'RESTOCK' },
+            { CODE: 'BLMGC-SD-0003', CATEGORY: 'PLAYING CUE', BRAND: '', PRODUCTNAME: 'S-DIAMOND BLUE', TIPSIZE: '12.5 MM', PRICE: 'P1,100', OPENINGSTOCK: 1, INDEV: 0, INRTS: 0, INYUANR: 0, OS: 0, YUANDMG: 0, FREEBIES: 0, ES: 1, STATUS: 'RESTOCK' },
+            { CODE: 'BLMGC-SD-0004', CATEGORY: 'PLAYING CUE', BRAND: '', PRODUCTNAME: 'S-DIAMOND GREEN', TIPSIZE: '12.5 MM', PRICE: 'P1,100', OPENINGSTOCK: 4, INDEV: 0, INRTS: 0, INYUANR: 0, OS: 0,YUANDMG: 0, FREEBIES: 0, ES: 4, STATUS: 'RESTOCK' },
+            { CODE: 'BLMGC-SC0R-0001', CATEGORY: 'PLAYING CUE', BRAND: 'SCORPION', PRODUCTNAME: 'SC01-RED WINE', TIPSIZE: '11.5 MM', PRICE: 'P1,300', OPENINGSTOCK: 0, INDEV: 0, INRTS: 0, INYUANR: 0, OS: 0, YUANDMG: 0, FREEBIES: 0, ES: 0, STATUS: 'OK' },
+            { CODE: 'BLMGC-SC0R-0002', CATEGORY: 'PLAYING CUE', BRAND: '', PRODUCTNAME: 'SC01-RED WINE', TIPSIZE: '12.5 MM', PRICE: 'P1,300', OPENINGSTOCK: 0, INDEV: 0, INRTS: 0, INYUANR: 0, OS: 0, YUANDMG: 0, FREEBIES: 0, ES: 0, STATUS: 'RESTOCK' },
+            { CODE: 'BLMGC-SC0R-0003', CATEGORY: 'PLAYING CUE', BRAND: '', PRODUCTNAME: 'SC02-TOASTED PEACAN', TIPSIZE: '11.5 MM', PRICE: 'P1,300', OPENINGSTOCK: 0, INDEV: 0, INRTS: 0, INYUANR: 0,OS: 0, YUANDMG: 0, FREEBIES: 0, ES: 0, STATUS: 'OK' },
+            { CODE: 'BLMGC-SC0R-0004', CATEGORY: 'PLAYING CUE', BRAND: '', PRODUCTNAME: 'SC02-TOASTED PEACAN', TIPSIZE: '12.5 MM', PRICE: 'P1,300', OPENINGSTOCK: 0, INDEV: 0, INRTS: 0, INYUANR: 0, OS: 0,YUANDMG: 0, FREEBIES: 0,ES: 0, STATUS: 'RESTOCK' },
+            { CODE: 'BLMGC-SD-0001', CATEGORY: 'PLAYING CUE', BRAND: 'S-DIAMOND', PRODUCTNAME: 'S-DIAMOND RED', TIPSIZE: '12.5 MM', PRICE: 'P1,100', OPENINGSTOCK: 0, INDEV: 0, INRTS: 0, INYUANR: 0, OS: 0, YUANDMG: 0, FREEBIES: 0, ES: 0, STATUS: 'RESTOCK' },
+            { CODE: 'BLMGC-SD-0002', CATEGORY: 'PLAYING CUE', BRAND: '', PRODUCTNAME: 'S-DIAMOND WHITE', TIPSIZE: '12.5 MM', PRICE: 'P1,100', OPENINGSTOCK: 1, INDEV: 0, INRTS: 0, INYUANR: 0, OS: 0, YUANDMG: 0, FREEBIES: 0, ES: 1, STATUS: 'RESTOCK' },
             { CODE: 'BLMGC-SD-0003', CATEGORY: 'PLAYING CUE', BRAND: '', PRODUCTNAME: 'S-DIAMOND BLUE', TIPSIZE: '12.5 MM', PRICE: 'P1,100', OPENINGSTOCK: 1, INDEV: 0, INRTS: 0, INYUANR: 0, OS: 0, YUANDMG: 0, FREEBIES: 0, ES: 1, STATUS: 'RESTOCK' },
             { CODE: 'BLMGC-SD-0004', CATEGORY: 'PLAYING CUE', BRAND: '', PRODUCTNAME: 'S-DIAMOND GREEN', TIPSIZE: '12.5 MM', PRICE: 'P1,100', OPENINGSTOCK: 4, INDEV: 0, INRTS: 0, INYUANR: 0, OS: 0,YUANDMG: 0, FREEBIES: 0, ES: 4, STATUS: 'RESTOCK' },
             { CODE: 'BLMGC-SC0R-0001', CATEGORY: 'PLAYING CUE', BRAND: 'SCORPION', PRODUCTNAME: 'SC01-RED WINE', TIPSIZE: '11.5 MM', PRICE: 'P1,300', OPENINGSTOCK: 0, INDEV: 0, INRTS: 0, INYUANR: 0, OS: 0, YUANDMG: 0, FREEBIES: 0, ES: 0, STATUS: 'RESTOCK' },
             { CODE: 'BLMGC-SC0R-0002', CATEGORY: 'PLAYING CUE', BRAND: '', PRODUCTNAME: 'SC01-RED WINE', TIPSIZE: '12.5 MM', PRICE: 'P1,300', OPENINGSTOCK: 0, INDEV: 0, INRTS: 0, INYUANR: 0, OS: 0, YUANDMG: 0, FREEBIES: 0, ES: 0, STATUS: 'RESTOCK' },
             { CODE: 'BLMGC-SC0R-0003', CATEGORY: 'PLAYING CUE', BRAND: '', PRODUCTNAME: 'SC02-TOASTED PEACAN', TIPSIZE: '11.5 MM', PRICE: 'P1,300', OPENINGSTOCK: 0, INDEV: 0, INRTS: 0, INYUANR: 0,OS: 0, YUANDMG: 0, FREEBIES: 0, ES: 0, STATUS: 'RESTOCK' },
             { CODE: 'BLMGC-SC0R-0004', CATEGORY: 'PLAYING CUE', BRAND: '', PRODUCTNAME: 'SC02-TOASTED PEACAN', TIPSIZE: '12.5 MM', PRICE: 'P1,300', OPENINGSTOCK: 0, INDEV: 0, INRTS: 0, INYUANR: 0, OS: 0,YUANDMG: 0, FREEBIES: 0,ES: 0, STATUS: 'RESTOCK' },
-            // Continue adding all your data similarly
           ];
           
         setMaterials(fakeData);
@@ -185,7 +202,7 @@ const Materials = () => {
           value={searchTerm}
           onChange={handleSearchChange}
           fullWidth
-          sx={{ mb: 2 }}
+          sx={{ mb: 2, backgroundColor: 'white' }}
         />
         <Typography variant="body1" sx={{ mb: 2 }}>
           Total Item: {filteredMaterials.length}
@@ -199,6 +216,22 @@ const Materials = () => {
         >
           Create New item
         </Button>
+         {/* Background Image */}
+                {/* <Box
+                  sx={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    height: "100%",
+                    backgroundImage: `url(${HeroImage})`, 
+                    backgroundSize: "cover",
+                    backgroundPosition: "center",
+                    backgroundRepeat: "no-repeat",
+                    zIndex: -1, // Place below the content
+                    opacity: 0.9, // Slight transparency for better readability
+                  }}
+                /> */}
 
         {loading ? (
           <Box sx={{ textAlign: "center", mt: 4 }}>
@@ -208,26 +241,22 @@ const Materials = () => {
             </Typography>
           </Box>
         ) : (
-          <TableContainer component={Paper} sx={{ maxHeight: 440 }}>
+          <TableContainer component={Paper} sx={{ maxHeight: 900 }}>
             <Table stickyHeader>
   <TableHead>
-    <TableRow>
-      <TableCell><strong>CODE</strong></TableCell>
-      <TableCell><strong>CATEGORY</strong></TableCell>
-      <TableCell><strong>BRAND</strong></TableCell>
-      <TableCell><strong>PRODUCT NAME</strong></TableCell>
-      <TableCell><strong>TIP SIZE</strong></TableCell>
-      <TableCell><strong>PRICE</strong></TableCell>
-      <TableCell><strong>OPENING STOCK</strong></TableCell>
-      <TableCell><strong>IN (DELIVERY)</strong></TableCell>
-      <TableCell><strong>IN (RTS)</strong></TableCell>
-      <TableCell><strong>IN (YUAN REPAIRED)</strong></TableCell>
-      <TableCell><strong>OUT (SALE)</strong></TableCell>
-      <TableCell><strong>OUT (YUAN/DAMAGED)</strong></TableCell>
-      <TableCell><strong>OUT (FREEBIE/S)</strong></TableCell>
-      <TableCell><strong>ENDING STOCK</strong></TableCell>
-      <TableCell><strong>STATUS</strong></TableCell>
-      <TableCell><strong>Actions</strong></TableCell>
+    <TableRow >
+      <TableCell sx={{ backgroundColor: 'green', color: 'white' }}><strong>CODE</strong></TableCell>
+      <TableCell sx={{ backgroundColor: 'green', color: 'white'  }}><strong>CATEGORY</strong></TableCell>
+      <TableCell sx={{ backgroundColor: 'green', color: 'white'  }}><strong>BRAND</strong></TableCell>
+      <TableCell sx={{ backgroundColor: 'green', color: 'white'  }}><strong>PRODUCT NAME</strong></TableCell>
+      <TableCell sx={{ backgroundColor: 'green', color: 'white'  }}><strong>TIP SIZE</strong></TableCell>
+      <TableCell sx={{ backgroundColor: 'green', color: 'white'  }}><strong>PRICE</strong></TableCell>
+      <TableCell sx={{ backgroundColor: 'green', color: 'white'  }}><strong>IN (DELIVERY)</strong></TableCell>
+      <TableCell sx={{ backgroundColor: 'green', color: 'white'  }}><strong>IN (RTS)</strong></TableCell>
+      <TableCell sx={{ backgroundColor: 'green', color: 'white'  }}><strong>OUT (SALE)</strong></TableCell>
+      <TableCell sx={{ backgroundColor: 'green', color: 'white'  }}><strong>ENDING STOCK</strong></TableCell>
+      <TableCell sx={{ backgroundColor: 'green', color: 'white'  }}><strong>STATUS</strong></TableCell>
+      <TableCell sx={{ backgroundColor: 'green', color: 'white'  }}><strong>Actions</strong></TableCell>
     </TableRow>
   </TableHead>
   <TableBody>
@@ -239,15 +268,18 @@ const Materials = () => {
         <TableCell>{material.PRODUCTNAME}</TableCell> {/* Assuming "brand" is a field in material */}
         <TableCell>{material.TIPSIZE}</TableCell> {/* Assuming "tipSize" is a field in material */}
         <TableCell>{material.PRICE}</TableCell> {/* Assuming "tipSize" is a field in material */}
-        <TableCell>{material.OPENINGSTOCK}</TableCell> {/* Assuming "openingStock" is a field */}
         <TableCell>{material.INDEV}</TableCell> {/* Assuming "inDelivery" is a field */}
         <TableCell>{material.INRTS}</TableCell> {/* Assuming "inRts" is a field */}
-        <TableCell>{material.INYUANR}</TableCell> {/* Assuming "inYuanRepaired" is a field */}
         <TableCell>{material.OS}</TableCell> {/* Assuming "outSale" is a field */}
-        <TableCell>{material.YUANDMG}</TableCell> {/* Assuming "outYuanDamaged" is a field */}
-        <TableCell>{material.FREEBIES}</TableCell> {/* Assuming "outFreebie" is a field */}
         <TableCell>{material.ES}</TableCell> {/* Assuming "endingStock" is a field */}
-        <TableCell>{material.STATUS}</TableCell> {/* Assuming "status" is a field */}
+        <TableCell
+    sx={{
+      backgroundColor: material.STATUS === 'RESTOCK' ? 'red' : material.STATUS === 'OK' ? 'green' : 'transparent',
+      color: 'white',
+    }}
+  >
+    {material.STATUS}
+  </TableCell>
         <TableCell>
           {isEditing === material._id ? (
             <Button onClick={() => handleSave(material._id)} variant="contained" color="primary">
