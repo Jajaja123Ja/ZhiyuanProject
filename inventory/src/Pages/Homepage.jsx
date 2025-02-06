@@ -55,12 +55,12 @@ const Homepage = () => {
                     }}
                 >
                     <Typography
-                        variant="h2"
+                        variant="h1"
                         component="h1"
                         sx={{
                             fontWeight: 'bold',
                             mb: 1,
-                            color: '#362a16', 
+                            color: 'black', 
                             textShadow: '2px 2px 8px rgba(0, 0, 0, 0.5)',
                         }}
                     >
@@ -68,14 +68,14 @@ const Homepage = () => {
                         Explore Quality Products Across Sports and Beauty
                     </Typography>
                     <Typography
-                        variant="h4"
+                        variant="h1"
                         component="h2"
                         sx={{
-                            color: '#362a16', // Same white for consistency
+                            color: 'black', // Same white for consistency
                             textShadow: '2px 2px 8px rgba(0, 0, 0, 0.5)',
                         }}
                     >
-                        {/* THANK YOU!!!!!!!!!!!!!!!!! */}
+                        {/* THANK YOU!!!!!!!!!!!!!!!!! - MHYNE */}
                         Your Trusted Source for Premium Imports
                     </Typography>
 

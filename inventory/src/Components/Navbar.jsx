@@ -1,4 +1,3 @@
-// src/components/Navbar.jsx
 import { useState } from "react";
 import { useAuthContext } from "../hooks/useAuthContext";
 import { useLogout } from "../hooks/useLogout";
@@ -11,51 +10,25 @@ import {
   Menu,
   MenuItem,
   Button,
-  Box, // Import Box
+  Box
 } from "@mui/material";
 import { FaUserCircle, FaHome } from "react-icons/fa";
 
-const Navbar = () => {
-  const { logout } = useLogout();
-  const { user } = useAuthContext();
-  const [dropdownAnchor, setDropdownAnchor] = useState(null);
-  const navigate = useNavigate();
-
-  const handleLogoutClick = () => {
-    logout();
-    setDropdownAnchor(null);
-  };
-
-  const handleDashboardNavigation = () => {
-    if (user?.role === "contractor") {
-      navigate("/ContractorDashboard");
-    } else if (user?.role === "user") {
-      navigate("/UserDashboard");
-    } else if (user?.role === "admin") {
-      navigate("/AdminDashboard");
-    }
-  };
-
-  const toggleDropdown = (event) => {
-    setDropdownAnchor(event.currentTarget);
-  };
-
-  const closeDropdown = () => {
-    setDropdownAnchor(null);
-  };
-
+const Navbar = ({ isHovered }) => {
   return (
     <AppBar
-      position="static"
+      position="fixed"
       sx={{
+        width: `calc(100% - ${isHovered ? "250px" : "60px"})`,
+        marginLeft: isHovered ? "250px" : "60px",
         backgroundColor: "#f5f5f5",
         color: "#3f5930",
+        transition: "margin-left 0.3s ease-in-out, width 0.3s ease-in-out",
         boxShadow: "none",
         padding: "0.5rem 1rem",
       }}
     >
       <Toolbar sx={{ display: "flex", alignItems: "center" }}>
-        {/* Company Info */}
         <Box sx={{ flex: 1 }}>
           <Typography
             variant="h6"
@@ -82,78 +55,6 @@ const Navbar = () => {
             </Typography>
           </Typography>
         </Box>
-
-        {/* Dashboard Button */}
-        <Box sx={{ flex: 1, display: "flex", justifyContent: "center" }}>
-          <Button
-            startIcon={<FaHome style={{ color: "#96720b" }} />}
-            onClick={handleDashboardNavigation}
-            sx={{
-              color: "#96720b",
-              textTransform: "none",
-              fontSize: { xs: "16px", md: "18px" },
-              fontWeight: "bold",
-              gap: "8px",
-              "&:hover": {
-                backgroundColor: "transparent",
-                color: "#96720b",
-              },
-            }}
-          >
-            Dashboard
-          </Button>
-        </Box>
-
-        {/* User Info and Profile Icon */}
-        {user && (
-          <Box
-            sx={{
-              flex: 1,
-              display: "flex",
-              justifyContent: "flex-end",
-              alignItems: "center",
-              gap: "8px",
-            }}
-          >
-            <Typography
-              variant="body1"
-              sx={{
-                color: "#a7b194",
-                fontWeight: "bold",
-                fontSize: { xs: "14px", md: "inherit" },
-              }}
-            >
-              Hi, {user.Username}
-            </Typography>
-            <IconButton
-              onClick={toggleDropdown}
-              sx={{
-                color: "#a7b194",
-                "&:hover": {
-                  color: "#6b7c61",
-                },
-              }}
-              size="large"
-              edge="end"
-              aria-label="account of current user"
-              aria-haspopup="true"
-            >
-              <FaUserCircle style={{ fontSize: "24px" }} />
-            </IconButton>
-            <Menu
-              anchorEl={dropdownAnchor}
-              open={Boolean(dropdownAnchor)}
-              onClose={closeDropdown}
-              PaperProps={{
-                style: {
-                  width: "200px",
-                },
-              }}
-            >
-              <MenuItem onClick={handleLogoutClick}>Logout</MenuItem>
-            </Menu>
-          </Box>
-        )}
       </Toolbar>
     </AppBar>
   );

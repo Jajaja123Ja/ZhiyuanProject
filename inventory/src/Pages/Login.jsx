@@ -12,6 +12,7 @@ import {
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, query, where, getDocs } from "firebase/firestore";
 import { useNavigate } from "react-router-dom"; // Import useNavigate
+import Header from "../Components/Header";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDq3Htb3rmhajlacOxl-YOehT5IW0mUlFU",
@@ -45,12 +46,11 @@ const Login = () => {
       const q = query(accountsRef, where("Username", "==", username), where("Password", "==", password));
       const querySnapshot = await getDocs(q);
 
-      if (!querySnapshot.empty) {
-        console.log("Login successful!");
+      if (!querySnapshot.empty) {     
         querySnapshot.forEach((doc) => {
           console.log("User ID:", doc.id, "Data:", doc.data());
         });
-        navigate("/materials"); // Redirect to Materials.jsx
+        navigate("/Dashboard"); // Redirect to Materials.jsx
       } else {
         setError("Invalid username or password.");
       }
@@ -67,6 +67,8 @@ const Login = () => {
   };
 
   return (
+    <>
+    <Header/>
     <Box
       sx={{
         backgroundColor: "#f5f5f5",
@@ -153,6 +155,7 @@ const Login = () => {
         )}
       </Box>
     </Box>
+    </>
   );
 };
 
