@@ -1,10 +1,10 @@
 // src/firebase.js
-
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore"; // Add deleteDoc and doc
 import { getDatabase, ref, get } from "firebase/database";
 
-// Firebase configuration object (you can find this in your Firebase console)
+// Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyDq3Htb3rmhajlacOxl-YOehT5IW0mUlFU",
   authDomain: "zhiyuan-inventory.firebaseapp.com",
@@ -20,6 +20,19 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const database = getDatabase(app);
-const db = getFirestore(app); // Initialize Firestore
+const db = getFirestore(app); // Firestore instance
 
-export { auth, database, signInWithEmailAndPassword, ref, get, db, collection, addDoc, getDocs };
+// Export Firestore methods
+export { 
+  auth, 
+  database, 
+  signInWithEmailAndPassword, 
+  ref, 
+  get, 
+  db, 
+  collection, 
+  addDoc, 
+  getDocs, 
+  deleteDoc, // ✅ Add deleteDoc
+  doc // ✅ Also export doc
+};
