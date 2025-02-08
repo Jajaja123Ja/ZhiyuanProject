@@ -6,18 +6,20 @@ import { getDatabase, ref, get } from "firebase/database";
 
 // Firebase configuration object (you can find this in your Firebase console)
 const firebaseConfig = {
-  apiKey: "your-api-key",
-  authDomain: "your-auth-domain",
-  databaseURL: "your-database-url",
-  projectId: "your-project-id",
-  storageBucket: "your-storage-bucket",
-  messagingSenderId: "your-messaging-sender-id",
-  appId: "your-app-id"
+  apiKey: "AIzaSyDq3Htb3rmhajlacOxl-YOehT5IW0mUlFU",
+  authDomain: "zhiyuan-inventory.firebaseapp.com",
+  databaseURL: "https://zhiyuan-inventory-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "zhiyuan-inventory",
+  storageBucket: "zhiyuan-inventory.firebasestorage.app",
+  messagingSenderId: "274439912070",
+  appId: "1:274439912070:web:c059c4726c3da266186f07",
+  measurementId: "G-CV89BZE58Q"
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const database = getDatabase(app);
+const db = getFirestore(app); // Initialize Firestore
 
-export { auth, database, signInWithEmailAndPassword, ref, get };
+export { auth, database, signInWithEmailAndPassword, ref, get, db, collection, addDoc, getDocs };

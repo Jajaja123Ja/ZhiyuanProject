@@ -162,7 +162,7 @@ const Materials = () => {
             variant="contained"
             startIcon={<AddIcon />}
             onClick={() => setIsModalOpen(true)}
-            sx={{ backgroundColor: "#96720b", "&:hover": { backgroundColor: "#96720b" }, mb: 2 }}
+            sx={{ backgroundColor: "#96720b", "&:hover": { backgroundColor: "##96720b" }, mb: 2 }}
           >
             Create New Item
           </Button>

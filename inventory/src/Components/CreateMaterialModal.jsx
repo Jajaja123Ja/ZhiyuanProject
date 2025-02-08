@@ -16,6 +16,8 @@ const modalStyle = {
 
 const CreateMaterialModal = ({ show, handleClose, handleSave }) => {
   const [material, setMaterial] = useState({
+    CODE: '',
+    MANUFACTURER: '',
     CATEGORY: '',
     BRAND: '',
     PRODUCTNAME: '',
