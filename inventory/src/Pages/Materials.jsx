@@ -11,7 +11,7 @@ import {
   TableRow,
   TextField,
   Typography,
-  Chip,
+  MenuItem
 } from "@mui/material";
 
 import AddIcon from "@mui/icons-material/Add";
@@ -19,25 +19,37 @@ import { useAuthContext } from "../hooks/useAuthContext";
 import Navbar from "../Components/Navbar";
 import ConfirmDeleteMaterialModal from "../Components/ConfirmDeleteMaterialModal";
 import CreateMaterialModal from "../Components/CreateMaterialModal";
+import SuccessModal from "../Components/SuccessModal";
 import Sidebar from "../Components/Sidebar";
-import { db, collection, addDoc, getDocs, deleteDoc, doc } from "../firebase"; // Firestore methods
+import { db } from "../firebase"; // Firestore
+import { 
+  collection, 
+  addDoc, 
+  getDocs, 
+  deleteDoc, 
+  doc, 
+  query, 
+  where, 
+  updateDoc 
+} from "firebase/firestore";
 
 const Materials = () => {
   const [materials, setMaterials] = useState([]);
-  const [isEditing, setIsEditing] = useState(null);
-  const [editedMaterial, setEditedMaterial] = useState({});
   const { user } = useAuthContext();
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedManufacturer, setSelectedManufacturer] = useState("All");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [isConfirmDeleteOpen, setIsConfirmDeleteOpen] = useState(false);
-  const [materialToDelete, setMaterialToDelete] = useState(null);
-  const [filteredMaterials, setFilteredMaterials] = useState([]); // Added this
-  const [selectedOwner, setSelectedOwner] = useState("All"); // Added this
-
-  // Sidebar hover state
   const [isHovered, setIsHovered] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
+const [updatedItem, setUpdatedItem] = useState({});
+const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [brandFilter, setBrandFilter] = useState(""); // Store selected brand
+  const [successModalOpen, setSuccessModalOpen] = useState(false);
+const [successMessage, setSuccessMessage] = useState("");
+
+
+
 
   useEffect(() => {
     const fetchMaterials = async () => {
@@ -46,22 +58,22 @@ const Materials = () => {
         const inventoryCollection = collection(db, "Inventory");
         const snapshot = await getDocs(inventoryCollection);
         const realData = snapshot.docs.map((doc) => ({
-          id: doc.id, // Firestore document ID
-          CODE: doc.data().CODE ?? "",  // Ensure correct field names
-          CATEGORY: doc.data().CATEGORY ?? "",
-          BRAND: doc.data().BRAND ?? "",
-          PRODUCTNAME: doc.data().PRODUCTNAME ?? "",
-          TIPSIZE: doc.data().TIPSIZE ?? "",
-          PRICE: doc.data().PRICE ?? "",
-          OPENINGSTOCK: doc.data().OPENINGSTOCK ?? 0,
-          INDELIVERY: doc.data().INDELIVERY ?? 0,
-          OUTSALE: doc.data().OUTSALE ?? 0,
-          ENDINGSTOCK: doc.data().ENDINGSTOCK ?? 0,
-          STATUS: doc.data().STATUS ?? "OK",
+          id: doc.id, // Firestore document ID (for internal use)
+          CODE: doc.data().CODE || "",
+          CATEGORY: doc.data().CATEGORY || "",
+          BRAND: doc.data().BRAND || "", 
+          PRODUCTNAME: doc.data().PRODUCTNAME || "",
+          TIPSIZE: doc.data().TIPSIZE || "",
+          PRICE: doc.data().PRICE || "",
+          OPENINGSTOCK: doc.data().OPENINGSTOCK || 0,
+          INDELIVERY: doc.data().INDELIVERY || 0,
+          OUTSALE: doc.data().OUTSALE || 0,
+          ENDINGSTOCK: doc.data().ENDINGSTOCK || 0,
+          STATUS: doc.data().STATUS || "OK",
+          IMAGE_URL: doc.data().IMAGE_URL || "",
         }));
 
         setMaterials(realData);
-        setFilteredMaterials(realData);
       } catch (error) {
         console.error("Error fetching materials:", error);
       } finally {
@@ -69,95 +81,115 @@ const Materials = () => {
       }
     };
 
-
     fetchMaterials();
   }, []);
 
+  const filterByBrand = (brand) => {
+    setBrandFilter(brand);
+  };
+  
+  // Function to reset the filter
+  const resetFilter = () => {
+    setBrandFilter("");
+  };
+
+  const handleEdit = (item) => {
+    setEditingItem(item.id); // Store the ID of the editing item
+    setUpdatedItem({ ...item }); // Load current values into the form
+  };
+  
+    // 🔹 Handle Input Change for Editing
+    const handleInputChange = (e) => {
+      const { name, value } = e.target;
+      setUpdatedItem((prev) => ({
+        ...prev,
+        [name]: value, // Update the correct field
+      }));
+    };
+    
+
+   // 🔹 Enable Editing on DELETE Click
+   const handleDeleteConfirm = (item) => {
+    setEditingItem(item.id);
+    setUpdatedItem({ ...item }); // Allow fields to be edited
+    setItemToDelete(item);
+    setDeleteModalOpen(true);
+  };
+
+  
+
+  const handleDelete = async () => {
+    if (!itemToDelete) return;
+  
+    try {
+      await deleteDoc(doc(db, "Inventory", itemToDelete.id));
+      setMaterials(materials.filter((item) => item.id !== itemToDelete.id));
+      setEditingItem(null);
+      setDeleteModalOpen(false);
+  
+      // ✅ Show success modal
+      setSuccessMessage("Item successfully deleted!");
+      setSuccessModalOpen(true);
+    } catch (error) {
+      console.error("Error deleting item:", error);
+      alert("Failed to delete item.");
+    }
+  };
+  
+  
+
+   // 🔹 Save Edits to Firestore
+   const saveEdit = async () => {
+    try {
+      await updateDoc(doc(db, "Inventory", editingItem), updatedItem);
+      setMaterials(materials.map((item) => (item.id === editingItem ? { ...updatedItem, id: editingItem } : item)));
+      setEditingItem(null);
+  
+      // ✅ Show success modal
+      setSuccessMessage("Item successfully updated!");
+      setSuccessModalOpen(true);
+    } catch (error) {
+      console.error("Error updating item:", error);
+      alert("Failed to update item.");
+    }
+  };
+  
+  
+  
+
   const handleCreate = async (newMaterial) => {
     try {
-      const inventoryCollection = collection(db, "Inventory"); // Reference Firestore collection
-
-      // Ensure all fields match the Firestore schema
-      const newItem = {
-        CODE: newMaterial.CODE, // User-provided CODE
-        CATEGORY: newMaterial.CATEGORY || "",
-        BRAND: newMaterial.BRAND || "",
-        PRODUCTNAME: newMaterial.PRODUCTNAME || "",
-        TIPSIZE: newMaterial.TIPSIZE || "",
-        PRICE: newMaterial.PRICE || "",
-        OPENINGSTOCK: newMaterial.OPENINGSTOCK || 0,
-        INDELIVERY: newMaterial.INDELIVERY || 0,
-        OUTSALE: newMaterial.OUTSALE || 0,
-        ENDINGSTOCK: newMaterial.ENDINGSTOCK || 0,
-        STATUS: newMaterial.STATUS || "OK",
+      const storage = getStorage(); // Initialize Firebase Storage
+      let imageUrl = "";
+  
+      if (newMaterial.IMAGE) {
+        const imageRef = ref(storage, `materials/${newMaterial.IMAGE.name}`);
+        await uploadBytes(imageRef, newMaterial.IMAGE);
+        imageUrl = await getDownloadURL(imageRef);
+      }
+  
+      // Include IMAGE_URL in Firestore data
+      const materialWithImage = {
+        ...newMaterial,
+        IMAGE_URL: imageUrl,
       };
-
-      // Save to Firestore
-      const docRef = await addDoc(inventoryCollection, newItem);
-      const savedItem = { id: docRef.id, ...newItem }; // Include Firestore ID
-
-      // Update the UI with new item
-      setMaterials([...materials, savedItem]);
+  
+      const inventoryCollection = collection(db, "Inventory");
+      const docRef = await addDoc(inventoryCollection, materialWithImage);
+  
+      setMaterials([...materials, { id: docRef.id, ...materialWithImage }]);
       setIsModalOpen(false);
-      alert("Item successfully added to Firestore!");
-
+  
+      // ✅ Show success modal
+      setSuccessMessage("Item successfully added to Inventory!");
+      setSuccessModalOpen(true);
     } catch (error) {
-      console.error("Error adding item: ", error);
+      console.error("Error adding item:", error);
       alert("Error adding item to Firestore.");
     }
   };
-
-
-
-  const filterMaterials = () => {
-    let filtered = materials;
-    if (selectedManufacturer !== "All") {
-      filtered = filtered.filter(
-        (material) => material.MANUFACTURER === selectedManufacturer
-      );
-    }
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (material) =>
-          material.PRODUCTNAME &&
-          material.PRODUCTNAME.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    return filtered;
-  };
-
-  const handleDelete = async (id) => {
-    const confirmDelete = window.confirm("Are you sure you want to delete this item?");
-    if (!confirmDelete) return;
-
-    try {
-      await deleteDoc(doc(db, "Inventory", id)); // Delete from Firestore
-      setMaterials(materials.filter((material) => material.id !== id));
-      alert("Item successfully deleted.");
-    } catch (error) {
-      console.error("Error deleting item: ", error);
-      alert("Error deleting item.");
-    }
-  };
-
-  const filterByOwner = (owner) => {
-    let filtered = materials; // Start with full list
-
-    if (owner === "BilMagic") {
-      filtered = materials.filter((item) => item.CODE.startsWith("BLM"));
-    } else if (owner === "Konllen") {
-      filtered = materials.filter((item) => item.CODE.startsWith("KL"));
-    } else if (owner === "Peri") {
-      filtered = materials.filter((item) => item.CODE.startsWith("PERI"));
-    } else {
-      filtered = materials; // Show all when "All" is selected
-    }
-
-    setFilteredMaterials(filtered);
-    setSelectedOwner(owner);
-  };
-
-
+  
+  
 
   return (
     <>
@@ -195,7 +227,6 @@ const Materials = () => {
             sx={{ mb: 2, backgroundColor: "white" }}
           />
 
-
           <Button
             variant="contained"
             startIcon={<AddIcon />}
@@ -209,37 +240,27 @@ const Materials = () => {
             Create New Item
           </Button>
           <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-            <Button
-              variant={selectedOwner === "All" ? "contained" : "outlined"}
-              onClick={() => filterByOwner("All")}
-            >
-              All
-            </Button>
-            <Button 
-              variant={selectedOwner === "BilMagic" ? "contained" : "outlined"}
-              onClick={() => filterByOwner("BilMagic")}
-            >
-              BilMagic (BLM)
-            </Button>
-            <Button
-              variant={selectedOwner === "Konllen" ? "contained" : "outlined"}
-              onClick={() => filterByOwner("Konllen")}
-            >
-              Konllen (KL)
-            </Button>
-            <Button
-              variant={selectedOwner === "Peri" ? "contained" : "outlined"}
-              onClick={() => filterByOwner("Peri")}
-            >
-              Peri (PERI)
-            </Button>
-          </Box>
+  <Button variant="contained" color="primary" onClick={() => filterByBrand("BLM")}>
+    BilMagic
+  </Button>
+  <Button variant="contained" color="secondary" onClick={() => filterByBrand("KL")}>
+    Konllen
+  </Button>
+  <Button variant="contained" color="success" onClick={() => filterByBrand("PERI")}>
+    Peri
+  </Button>
+  <Button variant="outlined" onClick={resetFilter}>
+    Reset Filter
+  </Button>
+</Box>
+
 
           <TableContainer component={Paper} sx={{ maxHeight: 900 }}>
             <Table stickyHeader>
               <TableHead>
                 <TableRow sx={{ backgroundColor: "#3f5930" }}>
                   {[
+                    "IMAGE",
                     "CODE",
                     "CATEGORY",
                     "BRAND",
@@ -276,49 +297,194 @@ const Materials = () => {
                   </TableCell>
                 </TableRow>
               </TableHead>
-
               <TableBody>
-                {filteredMaterials.map((material) => (
-                  <TableRow key={material.id}>
-                    {/* Ensure each field maps correctly to the right column */}
-                    <TableCell>{material.CODE}</TableCell>
-                    <TableCell>{material.CATEGORY}</TableCell>
-                    <TableCell>{material.BRAND}</TableCell>
-                    <TableCell>{material.PRODUCTNAME}</TableCell>
-                    <TableCell>{material.TIPSIZE}</TableCell>
-                    <TableCell>{material.PRICE}</TableCell>
-                    <TableCell>{material.OPENINGSTOCK}</TableCell>
-                    <TableCell>{material.INDELIVERY}</TableCell>
-                    <TableCell>{material.OUTSALE}</TableCell>
-                    <TableCell>{material.ENDINGSTOCK}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={material.STATUS}
-                        sx={{
-                          backgroundColor: material.STATUS === "RESTOCK" ? "red" : "green",
-                          color: "white",
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="outlined" sx={{ mr: 1 }} onClick={() => setIsEditing(material.id)}>
-                        Edit
-                      </Button>
-                      <Button variant="contained" color="error" onClick={() => handleDelete(material.id)}>
-                        Delete
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
+  {materials
+    .filter((item) => {
+      if (!brandFilter) return true; // Show all if no filter
+      return item.CODE.startsWith(brandFilter);
+    })
+    .map((item) =>  (
+    <TableRow key={item.id}>
+      <TableCell>
+  {item.IMAGE_URL ? (
+    <img 
+      src={item.IMAGE_URL} 
+      alt={item.PRODUCTNAME} 
+      style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "5px" }} 
+    />
+  ) : (
+    "No Image"
+  )}
+</TableCell>
+
+      <TableCell>
+        {editingItem === item.id ? (
+          <TextField name="CODE" value={updatedItem.CODE} onChange={handleInputChange} />
+        ) : (
+          item.CODE
+        )}
+      </TableCell>
+      <TableCell>
+        {editingItem === item.id ? (
+          <TextField name="CATEGORY" value={updatedItem.CATEGORY} onChange={handleInputChange} />
+        ) : (
+          item.CATEGORY
+        )}
+      </TableCell>
+      <TableCell>
+  {editingItem === item.id ? (
+    <TextField name="BRAND" value={updatedItem.BRAND} onChange={handleInputChange} />
+  ) : (
+    item.BRAND
+  )}
+</TableCell>
+<TableCell>
+  {editingItem === item.id ? (
+    <TextField name="PRODUCTNAME" value={updatedItem.PRODUCTNAME} onChange={handleInputChange} />
+  ) : (
+    item.PRODUCTNAME
+  )}
+</TableCell>
+<TableCell>
+  {editingItem === item.id ? (
+    <TextField name="TIPSIZE" value={updatedItem.TIPSIZE} onChange={handleInputChange} />
+  ) : (
+    item.TIPSIZE
+  )}
+</TableCell>
+<TableCell>
+  {editingItem === item.id ? (
+    <TextField name="PRICE" value={updatedItem.PRICE} onChange={handleInputChange} />
+  ) : (
+    item.PRICE
+  )}
+</TableCell>
+<TableCell>
+  {editingItem === item.id ? (
+    <TextField name="OPENINGSTOCK" value={updatedItem.OPENINGSTOCK} onChange={handleInputChange} />
+  ) : (
+    item.OPENINGSTOCK
+  )}
+</TableCell>
+<TableCell>
+  {editingItem === item.id ? (
+    <TextField name="INDELIVERY" value={updatedItem.INDELIVERY} onChange={handleInputChange} />
+  ) : (
+    item.INDELIVERY
+  )}
+</TableCell>
+<TableCell>
+  {editingItem === item.id ? (
+    <TextField name="OUTSALE" value={updatedItem.OUTSALE} onChange={handleInputChange} />
+  ) : (
+    item.OUTSALE
+  )}
+</TableCell>
+<TableCell>
+  {editingItem === item.id ? (
+    <TextField name="ENDINGSTOCK" value={updatedItem.ENDINGSTOCK} onChange={handleInputChange} />
+  ) : (
+    item.ENDINGSTOCK
+  )}
+</TableCell>
+<TableCell
+  sx={{
+    backgroundColor:
+      editingItem === item.id
+        ? updatedItem.STATUS === "RESTOCK"
+          ? "red"
+          : "green"
+        : item.STATUS === "RESTOCK"
+        ? "red"
+        : "green",
+    color: "white",
+    fontWeight: "bold",
+    textAlign: "center",
+    borderRadius: "5px",
+    padding: "5px",
+  }}
+>
+  {editingItem === item.id ? (
+    <Box sx={{ display: "flex", alignItems: "center" }}>
+      <TextField
+        select
+        name="STATUS"
+        value={updatedItem.STATUS}
+        onChange={handleInputChange}
+        variant="outlined"
+        fullWidth
+        sx={{
+          backgroundColor: "white",
+          borderRadius: "5px",
+          "& .MuiOutlinedInput-root": {
+            "& fieldset": { borderColor: "white" },
+            "&:hover fieldset": { borderColor: "gray" },
+            "&.Mui-focused fieldset": { borderColor: "gray" },
+          },
+        }}
+      >
+        <MenuItem value="OK" sx={{ backgroundColor: "green", color: "white" }}>
+          ✅ OK
+        </MenuItem>
+        <MenuItem value="RESTOCK" sx={{ backgroundColor: "red", color: "white" }}>
+          🚨 RESTOCK
+        </MenuItem>
+      </TextField>
+    </Box>
+  ) : (
+    item.STATUS
+  )}
+</TableCell>
+
+
+
+      <TableCell>
+        {editingItem === item.id ? (
+          <>
+            <Button variant="contained" color="primary" onClick={saveEdit}>
+              Save
+            </Button>
+            <Button variant="contained" color="secondary" onClick={() => setEditingItem(null)}>
+              Cancel
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button variant="outlined" onClick={() => handleEdit(item)}>
+              Edit
+            </Button>
+            <Button variant="contained" color="error" onClick={() => handleDeleteConfirm(item)}>
+  Delete
+</Button>
+
+          </>
+        )}
+      </TableCell>
+    </TableRow>
+  ))}
+</TableBody>
 
             </Table>
           </TableContainer>
 
+          <ConfirmDeleteMaterialModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleDelete}
+        materialDescription={itemToDelete ? itemToDelete.PRODUCTNAME : ""}
+      />
+
+<SuccessModal
+  open={successModalOpen}
+  onClose={() => setSuccessModalOpen(false)}
+  message={successMessage}
+/>
+
+
           <CreateMaterialModal
             show={isModalOpen}
             handleClose={() => setIsModalOpen(false)}
-            handleSave={handleCreate} // Pass handleCreate function
+            handleSave={handleCreate}
           />
         </Box>
       </Box>

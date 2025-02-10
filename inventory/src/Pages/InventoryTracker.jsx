@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import { db } from "../firebase"; // Ensure correct Firebase config path
+import { collection, query, where, getDocs, updateDoc, doc } from "firebase/firestore";
+
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
@@ -46,6 +49,26 @@ const InventoryTracker = () => {
   const [editingEntry, setEditingEntry] = useState(null);
   const [deleteEntry, setDeleteEntry] = useState(null);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+  const [outSaleEntries, setOutSaleEntries] = useState([]);
+
+  useEffect(() => {
+    const fetchOutSaleItems = async () => {
+      try {
+        const outSaleCollectionRef = collection(db, "OutSale");
+        const snapshot = await getDocs(outSaleCollectionRef);
+        const outSaleData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+  
+        setOutSaleEntries(outSaleData);
+      } catch (error) {
+        console.error("Error fetching OutSale items:", error);
+      }
+    };
+  
+    fetchOutSaleItems();
+  }, []);
 
   const handleTabChange = (_, newValue) => {
     setSelectedTab(newValue);
@@ -55,12 +78,64 @@ const InventoryTracker = () => {
     setNewEntry({ ...newEntry, [e.target.name]: e.target.value });
   };
 
-  const addEntry = () => {
-    if (newEntry.date && newEntry.product && newEntry.qty) {
-      setEntries([...entries, { id: Date.now(), ...newEntry, category: categories[selectedTab] }]);
-      setNewEntry({ date: "", product: "", code: "", qty: "" });
+  const addEntry = async () => {
+    if (!newEntry.date || !newEntry.code || !newEntry.qty) {
+      alert("Please fill in all fields.");
+      return;
+    }
+  
+    const qty = parseInt(newEntry.qty, 10); // Convert input to number
+    if (isNaN(qty) || qty <= 0) {
+      alert("Quantity must be a valid number greater than zero.");
+      return;
+    }
+  
+    try {
+      const inventoryRef = collection(db, "Inventory");
+      const q = query(inventoryRef, where("CODE", "==", newEntry.code));
+      const querySnapshot = await getDocs(q);
+  
+      if (!querySnapshot.empty) {
+        const productDoc = querySnapshot.docs[0];
+        const productData = productDoc.data();
+  
+        console.log("Product Data:", productData); // Debugging
+  
+        // Ensure ENDINGSTOCK is treated as a number
+        const currentStock = Number(productData.ENDINGSTOCK || 0);
+        const updatedStock = currentStock - qty;
+        const updatedOutSale = Number(productData.OUTSALE || 0) + qty;
+  
+        if (updatedStock < 0) {
+          alert(`Not enough stock! Available: ${currentStock}`);
+          return;
+        }
+  
+        // Update Firestore Document
+        await updateDoc(doc(db, "Inventory", productDoc.id), {
+          ENDINGSTOCK: updatedStock,
+          OUTSALE: updatedOutSale,
+        });
+  
+        console.log(`Updated Firestore: ENDINGSTOCK=${updatedStock}, OUTSALE=${updatedOutSale}`);
+  
+        // Update UI
+        setEntries([
+          ...entries,
+          { id: Date.now(), ...newEntry, category: categories[selectedTab] },
+        ]);
+  
+        setNewEntry({ date: "", product: "", code: "", qty: "" });
+  
+      } else {
+        alert("Product code not found in inventory!");
+      }
+    } catch (error) {
+      console.error("Error updating stock:", error);
+      alert("Failed to update stock. Please try again.");
     }
   };
+  
 
   const handleEdit = (entry) => {
     setEditingEntry(entry);
@@ -107,7 +182,6 @@ const InventoryTracker = () => {
             <Typography variant="h6">Add Entry</Typography>
             <Box sx={{ display: "flex", gap: 2, mt: 2 }}>
               <TextField label="Date" type="date" name="date" value={newEntry.date} onChange={handleInputChange} />
-              <TextField label="Product Name" name="product" value={newEntry.product} onChange={handleInputChange} />
               <TextField label="Code" name="code" value={newEntry.code} onChange={handleInputChange} />
               <TextField label="Quantity" type="number" name="qty" value={newEntry.qty} onChange={handleInputChange} />
               <Button variant="contained" onClick={addEntry} sx={{ bgcolor: "#8B4513", color: "white" }}>
@@ -129,9 +203,9 @@ const InventoryTracker = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {entries
-                  .filter((entry) => entry.category === categories[selectedTab])
-                  .map((entry, index) => (
+              {(selectedTab === 3 ? outSaleEntries : entries)
+  .filter((entry) => entry.category === categories[selectedTab] || selectedTab === 3)
+  .map((entry, index) => (
                     <TableRow key={index}>
                       <TableCell>{editingEntry?.id === entry.id ? <TextField name="date" value={editingEntry.date} onChange={handleEditChange} /> : entry.date}</TableCell>
                       <TableCell>{editingEntry?.id === entry.id ? <TextField name="product" value={editingEntry.product} onChange={handleEditChange} /> : entry.product}</TableCell>
