@@ -15,24 +15,26 @@ export const authReducer = (state, action) => {
 };
 
 export const AuthContextProvider = ({ children }) => {
-  const [state, dispatch] = useReducer(authReducer, {
-    user: null
-  });
+  const [state, dispatch] = useReducer(authReducer, { user: null });
 
   useEffect(() => {
-    const storedUser = JSON.parse(localStorage.getItem('user'));
-  
-    if (storedUser) {
-      dispatch({ type: 'LOGIN', payload: storedUser });
-    } else {
-      console.warn('No user found in localStorage');  
-      dispatch({ type: 'LOGOUT' });  
-    }
-  }, [dispatch]);
-  
-  
+    const storedUser = localStorage.getItem('user');
 
-  console.log('authcontext state: ', state);
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        dispatch({ type: 'LOGIN', payload: parsedUser });
+      } catch (error) {
+        console.error('Error parsing user from localStorage:', error);
+        localStorage.removeItem('user'); // Remove corrupted data
+        dispatch({ type: 'LOGOUT' });
+      }
+    } else {
+      console.warn('No user found in localStorage');
+    }
+  }, []);
+
+  console.log('AuthContext state:', state);
 
   return (
     <AuthContext.Provider value={{ ...state, dispatch }}>

@@ -22,16 +22,17 @@ import CreateMaterialModal from "../Components/CreateMaterialModal";
 import SuccessModal from "../Components/SuccessModal";
 import Sidebar from "../Components/Sidebar";
 import { db } from "../firebase"; // Firestore
-import { 
-  collection, 
-  addDoc, 
-  getDocs, 
-  deleteDoc, 
-  doc, 
-  query, 
-  where, 
-  updateDoc 
+import {
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc,
+  query,
+  where,
+  updateDoc
 } from "firebase/firestore";
+
 
 const Materials = () => {
   const [materials, setMaterials] = useState([]);
@@ -41,12 +42,12 @@ const Materials = () => {
   const [loading, setLoading] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-const [updatedItem, setUpdatedItem] = useState({});
-const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [updatedItem, setUpdatedItem] = useState({});
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
   const [brandFilter, setBrandFilter] = useState(""); // Store selected brand
   const [successModalOpen, setSuccessModalOpen] = useState(false);
-const [successMessage, setSuccessMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
 
 
@@ -61,7 +62,7 @@ const [successMessage, setSuccessMessage] = useState("");
           id: doc.id, // Firestore document ID (for internal use)
           CODE: doc.data().CODE || "",
           CATEGORY: doc.data().CATEGORY || "",
-          BRAND: doc.data().BRAND || "", 
+          BRAND: doc.data().BRAND || "",
           PRODUCTNAME: doc.data().PRODUCTNAME || "",
           TIPSIZE: doc.data().TIPSIZE || "",
           PRICE: doc.data().PRICE || "",
@@ -87,7 +88,7 @@ const [successMessage, setSuccessMessage] = useState("");
   const filterByBrand = (brand) => {
     setBrandFilter(brand);
   };
-  
+
   // Function to reset the filter
   const resetFilter = () => {
     setBrandFilter("");
@@ -97,36 +98,36 @@ const [successMessage, setSuccessMessage] = useState("");
     setEditingItem(item.id); // Store the ID of the editing item
     setUpdatedItem({ ...item }); // Load current values into the form
   };
-  
-    // 🔹 Handle Input Change for Editing
-    const handleInputChange = (e) => {
-      const { name, value } = e.target;
-      setUpdatedItem((prev) => ({
-        ...prev,
-        [name]: value, // Update the correct field
-      }));
-    };
-    
 
-   // 🔹 Enable Editing on DELETE Click
-   const handleDeleteConfirm = (item) => {
+  // 🔹 Handle Input Change for Editing
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setUpdatedItem((prev) => ({
+      ...prev,
+      [name]: value, // Update the correct field
+    }));
+  };
+
+
+  // 🔹 Enable Editing on DELETE Click
+  const handleDeleteConfirm = (item) => {
     setEditingItem(item.id);
     setUpdatedItem({ ...item }); // Allow fields to be edited
     setItemToDelete(item);
     setDeleteModalOpen(true);
   };
 
-  
+
 
   const handleDelete = async () => {
     if (!itemToDelete) return;
-  
+
     try {
       await deleteDoc(doc(db, "Inventory", itemToDelete.id));
       setMaterials(materials.filter((item) => item.id !== itemToDelete.id));
       setEditingItem(null);
       setDeleteModalOpen(false);
-  
+
       // ✅ Show success modal
       setSuccessMessage("Item successfully deleted!");
       setSuccessModalOpen(true);
@@ -135,16 +136,16 @@ const [successMessage, setSuccessMessage] = useState("");
       alert("Failed to delete item.");
     }
   };
-  
-  
 
-   // 🔹 Save Edits to Firestore
-   const saveEdit = async () => {
+
+
+  // 🔹 Save Edits to Firestore
+  const saveEdit = async () => {
     try {
       await updateDoc(doc(db, "Inventory", editingItem), updatedItem);
       setMaterials(materials.map((item) => (item.id === editingItem ? { ...updatedItem, id: editingItem } : item)));
       setEditingItem(null);
-  
+
       // ✅ Show success modal
       setSuccessMessage("Item successfully updated!");
       setSuccessModalOpen(true);
@@ -153,33 +154,33 @@ const [successMessage, setSuccessMessage] = useState("");
       alert("Failed to update item.");
     }
   };
-  
-  
-  
+
+
+
 
   const handleCreate = async (newMaterial) => {
     try {
       const storage = getStorage(); // Initialize Firebase Storage
       let imageUrl = "";
-  
+
       if (newMaterial.IMAGE) {
         const imageRef = ref(storage, `materials/${newMaterial.IMAGE.name}`);
         await uploadBytes(imageRef, newMaterial.IMAGE);
         imageUrl = await getDownloadURL(imageRef);
       }
-  
+
       // Include IMAGE_URL in Firestore data
       const materialWithImage = {
         ...newMaterial,
         IMAGE_URL: imageUrl,
       };
-  
+
       const inventoryCollection = collection(db, "Inventory");
       const docRef = await addDoc(inventoryCollection, materialWithImage);
-  
+
       setMaterials([...materials, { id: docRef.id, ...materialWithImage }]);
       setIsModalOpen(false);
-  
+
       // ✅ Show success modal
       setSuccessMessage("Item successfully added to Inventory!");
       setSuccessModalOpen(true);
@@ -188,8 +189,8 @@ const [successMessage, setSuccessMessage] = useState("");
       alert("Error adding item to Firestore.");
     }
   };
-  
-  
+
+
 
   return (
     <>
@@ -232,7 +233,7 @@ const [successMessage, setSuccessMessage] = useState("");
             startIcon={<AddIcon />}
             onClick={() => setIsModalOpen(true)}
             sx={{
-              backgroundColor: "#96720b",
+              backgroundColor: "#3f5930",
               "&:hover": { backgroundColor: "##96720b" },
               mb: 2,
             }}
@@ -240,19 +241,19 @@ const [successMessage, setSuccessMessage] = useState("");
             Create New Item
           </Button>
           <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-  <Button variant="contained" color="primary" onClick={() => filterByBrand("BLM")}>
-    BilMagic
-  </Button>
-  <Button variant="contained" color="secondary" onClick={() => filterByBrand("KL")}>
-    Konllen
-  </Button>
-  <Button variant="contained" color="success" onClick={() => filterByBrand("PERI")}>
-    Peri
-  </Button>
-  <Button variant="outlined" onClick={resetFilter}>
-    Reset Filter
-  </Button>
-</Box>
+            <Button variant="contained" color="primary" onClick={() => filterByBrand("BLM")}>
+              BilMagic
+            </Button>
+            <Button variant="contained" color="secondary" onClick={() => filterByBrand("KL")}>
+              Konllen
+            </Button>
+            <Button variant="contained" color="success" onClick={() => filterByBrand("PERI")}>
+              Peri
+            </Button>
+            <Button variant="outlined" onClick={resetFilter}>
+              Reset Filter
+            </Button>
+          </Box>
 
 
           <TableContainer component={Paper} sx={{ maxHeight: 900 }}>
@@ -298,187 +299,187 @@ const [successMessage, setSuccessMessage] = useState("");
                 </TableRow>
               </TableHead>
               <TableBody>
-  {materials
-    .filter((item) => {
-      if (!brandFilter) return true; // Show all if no filter
-      return item.CODE.startsWith(brandFilter);
-    })
-    .map((item) =>  (
-    <TableRow key={item.id}>
-      <TableCell>
-  {item.IMAGE_URL ? (
-    <img 
-      src={item.IMAGE_URL} 
-      alt={item.PRODUCTNAME} 
-      style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "5px" }} 
-    />
-  ) : (
-    "No Image"
-  )}
-</TableCell>
+                {materials
+                  .filter((item) => {
+                    if (!brandFilter) return true; // Show all if no filter
+                    return item.CODE.startsWith(brandFilter);
+                  })
+                  .map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell>
+                        {item.IMAGE_URL ? (
+                          <img
+                            src={item.IMAGE_URL}
+                            alt={item.PRODUCTNAME}
+                            style={{ width: "50px", height: "50px", objectFit: "cover", borderRadius: "5px" }}
+                          />
+                        ) : (
+                          "No Image"
+                        )}
+                      </TableCell>
 
-      <TableCell>
-        {editingItem === item.id ? (
-          <TextField name="CODE" value={updatedItem.CODE} onChange={handleInputChange} />
-        ) : (
-          item.CODE
-        )}
-      </TableCell>
-      <TableCell>
-        {editingItem === item.id ? (
-          <TextField name="CATEGORY" value={updatedItem.CATEGORY} onChange={handleInputChange} />
-        ) : (
-          item.CATEGORY
-        )}
-      </TableCell>
-      <TableCell>
-  {editingItem === item.id ? (
-    <TextField name="BRAND" value={updatedItem.BRAND} onChange={handleInputChange} />
-  ) : (
-    item.BRAND
-  )}
-</TableCell>
-<TableCell>
-  {editingItem === item.id ? (
-    <TextField name="PRODUCTNAME" value={updatedItem.PRODUCTNAME} onChange={handleInputChange} />
-  ) : (
-    item.PRODUCTNAME
-  )}
-</TableCell>
-<TableCell>
-  {editingItem === item.id ? (
-    <TextField name="TIPSIZE" value={updatedItem.TIPSIZE} onChange={handleInputChange} />
-  ) : (
-    item.TIPSIZE
-  )}
-</TableCell>
-<TableCell>
-  {editingItem === item.id ? (
-    <TextField name="PRICE" value={updatedItem.PRICE} onChange={handleInputChange} />
-  ) : (
-    item.PRICE
-  )}
-</TableCell>
-<TableCell>
-  {editingItem === item.id ? (
-    <TextField name="OPENINGSTOCK" value={updatedItem.OPENINGSTOCK} onChange={handleInputChange} />
-  ) : (
-    item.OPENINGSTOCK
-  )}
-</TableCell>
-<TableCell>
-  {editingItem === item.id ? (
-    <TextField name="INDELIVERY" value={updatedItem.INDELIVERY} onChange={handleInputChange} />
-  ) : (
-    item.INDELIVERY
-  )}
-</TableCell>
-<TableCell>
-  {editingItem === item.id ? (
-    <TextField name="OUTSALE" value={updatedItem.OUTSALE} onChange={handleInputChange} />
-  ) : (
-    item.OUTSALE
-  )}
-</TableCell>
-<TableCell>
-  {editingItem === item.id ? (
-    <TextField name="ENDINGSTOCK" value={updatedItem.ENDINGSTOCK} onChange={handleInputChange} />
-  ) : (
-    item.ENDINGSTOCK
-  )}
-</TableCell>
-<TableCell
-  sx={{
-    backgroundColor:
-      editingItem === item.id
-        ? updatedItem.STATUS === "RESTOCK"
-          ? "red"
-          : "green"
-        : item.STATUS === "RESTOCK"
-        ? "red"
-        : "green",
-    color: "white",
-    fontWeight: "bold",
-    textAlign: "center",
-    borderRadius: "5px",
-    padding: "5px",
-  }}
->
-  {editingItem === item.id ? (
-    <Box sx={{ display: "flex", alignItems: "center" }}>
-      <TextField
-        select
-        name="STATUS"
-        value={updatedItem.STATUS}
-        onChange={handleInputChange}
-        variant="outlined"
-        fullWidth
-        sx={{
-          backgroundColor: "white",
-          borderRadius: "5px",
-          "& .MuiOutlinedInput-root": {
-            "& fieldset": { borderColor: "white" },
-            "&:hover fieldset": { borderColor: "gray" },
-            "&.Mui-focused fieldset": { borderColor: "gray" },
-          },
-        }}
-      >
-        <MenuItem value="OK" sx={{ backgroundColor: "green", color: "white" }}>
-          ✅ OK
-        </MenuItem>
-        <MenuItem value="RESTOCK" sx={{ backgroundColor: "red", color: "white" }}>
-          🚨 RESTOCK
-        </MenuItem>
-      </TextField>
-    </Box>
-  ) : (
-    item.STATUS
-  )}
-</TableCell>
+                      <TableCell>
+                        {editingItem === item.id ? (
+                          <TextField name="CODE" value={updatedItem.CODE} onChange={handleInputChange} />
+                        ) : (
+                          item.CODE
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingItem === item.id ? (
+                          <TextField name="CATEGORY" value={updatedItem.CATEGORY} onChange={handleInputChange} />
+                        ) : (
+                          item.CATEGORY
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingItem === item.id ? (
+                          <TextField name="BRAND" value={updatedItem.BRAND} onChange={handleInputChange} />
+                        ) : (
+                          item.BRAND
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingItem === item.id ? (
+                          <TextField name="PRODUCTNAME" value={updatedItem.PRODUCTNAME} onChange={handleInputChange} />
+                        ) : (
+                          item.PRODUCTNAME
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingItem === item.id ? (
+                          <TextField name="TIPSIZE" value={updatedItem.TIPSIZE} onChange={handleInputChange} />
+                        ) : (
+                          item.TIPSIZE
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingItem === item.id ? (
+                          <TextField name="PRICE" value={updatedItem.PRICE} onChange={handleInputChange} />
+                        ) : (
+                          `₱${new Intl.NumberFormat('en-PH', { style: 'decimal', minimumFractionDigits: 2 }).format(item.PRICE)}`
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingItem === item.id ? (
+                          <TextField name="OPENINGSTOCK" value={updatedItem.OPENINGSTOCK} onChange={handleInputChange} />
+                        ) : (
+                          item.OPENINGSTOCK
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingItem === item.id ? (
+                          <TextField name="INDELIVERY" value={updatedItem.INDELIVERY} onChange={handleInputChange} />
+                        ) : (
+                          item.INDELIVERY
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingItem === item.id ? (
+                          <TextField name="OUTSALE" value={updatedItem.OUTSALE} onChange={handleInputChange} />
+                        ) : (
+                          item.OUTSALE
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingItem === item.id ? (
+                          <TextField name="ENDINGSTOCK" value={updatedItem.ENDINGSTOCK} onChange={handleInputChange} />
+                        ) : (
+                          item.ENDINGSTOCK
+                        )}
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          backgroundColor:
+                            editingItem === item.id
+                              ? updatedItem.STATUS === "RESTOCK"
+                                ? "red"
+                                : "green"
+                              : item.STATUS === "RESTOCK"
+                                ? "red"
+                                : "green",
+                          color: "white",
+                          fontWeight: "bold",
+                          textAlign: "center",
+                          borderRadius: "5px",
+                          padding: "5px",
+                        }}
+                      >
+                        {editingItem === item.id ? (
+                          <Box sx={{ display: "flex", alignItems: "center" }}>
+                            <TextField
+                              select
+                              name="STATUS"
+                              value={updatedItem.STATUS}
+                              onChange={handleInputChange}
+                              variant="outlined"
+                              fullWidth
+                              sx={{
+                                backgroundColor: "white",
+                                borderRadius: "5px",
+                                "& .MuiOutlinedInput-root": {
+                                  "& fieldset": { borderColor: "white" },
+                                  "&:hover fieldset": { borderColor: "gray" },
+                                  "&.Mui-focused fieldset": { borderColor: "gray" },
+                                },
+                              }}
+                            >
+                              <MenuItem value="OK" sx={{ backgroundColor: "green", color: "white" }}>
+                                ✅ OK
+                              </MenuItem>
+                              <MenuItem value="RESTOCK" sx={{ backgroundColor: "red", color: "white" }}>
+                                🚨 RESTOCK
+                              </MenuItem>
+                            </TextField>
+                          </Box>
+                        ) : (
+                          item.STATUS
+                        )}
+                      </TableCell>
 
 
 
-      <TableCell>
-        {editingItem === item.id ? (
-          <>
-            <Button variant="contained" color="primary" onClick={saveEdit}>
-              Save
-            </Button>
-            <Button variant="contained" color="secondary" onClick={() => setEditingItem(null)}>
-              Cancel
-            </Button>
-          </>
-        ) : (
-          <>
-            <Button variant="outlined" onClick={() => handleEdit(item)}>
-              Edit
-            </Button>
-            <Button variant="contained" color="error" onClick={() => handleDeleteConfirm(item)}>
-  Delete
-</Button>
+                      <TableCell>
+                        {editingItem === item.id ? (
+                          <>
+                            <Button variant="contained" color="primary" onClick={saveEdit}>
+                              Save
+                            </Button>
+                            <Button variant="contained" color="secondary" onClick={() => setEditingItem(null)}>
+                              Cancel
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button variant="outlined" onClick={() => handleEdit(item)}>
+                              Edit
+                            </Button>
+                            <Button variant="contained" color="error" onClick={() => handleDeleteConfirm(item)}>
+                              Delete
+                            </Button>
 
-          </>
-        )}
-      </TableCell>
-    </TableRow>
-  ))}
-</TableBody>
+                          </>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+              </TableBody>
 
             </Table>
           </TableContainer>
 
           <ConfirmDeleteMaterialModal
-        isOpen={deleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
-        onConfirm={handleDelete}
-        materialDescription={itemToDelete ? itemToDelete.PRODUCTNAME : ""}
-      />
+            isOpen={deleteModalOpen}
+            onClose={() => setDeleteModalOpen(false)}
+            onConfirm={handleDelete}
+            materialDescription={itemToDelete ? itemToDelete.PRODUCTNAME : ""}
+          />
 
-<SuccessModal
-  open={successModalOpen}
-  onClose={() => setSuccessModalOpen(false)}
-  message={successMessage}
-/>
+          <SuccessModal
+            open={successModalOpen}
+            onClose={() => setSuccessModalOpen(false)}
+            message={successMessage}
+          />
 
 
           <CreateMaterialModal

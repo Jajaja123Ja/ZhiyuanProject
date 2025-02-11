@@ -1,48 +1,58 @@
 import { useState } from "react";
 import { useAuthContext } from "./useAuthContext";
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { getFirestore, collection, query, where, getDocs } from "firebase/firestore";
 
 export const useLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const { dispatch } = useAuthContext();
   const navigate = useNavigate();
+  const db = getFirestore();
 
-  const login = async (Username, password) => {
+  const login = async (username, password) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await axios.post();
-      const json = response.data;
+      // Query Firestore to check if username and password match
+      const accountsRef = collection(db, "Accounts");
+      const q = query(accountsRef, where("User", "==", username), where("Password", "==", password)); // Use correct Firestore field names
+      const querySnapshot = await getDocs(q);
 
-      // Log the user data after logging in
-      console.log('User login response:', json);
-
-      // Save the user details to localStorage
-      localStorage.setItem('user', JSON.stringify(json));
-
-      // Update the global auth context with the logged-in user
-      dispatch({ type: 'LOGIN', payload: json });
-
-      // Redirect based on user role
-      const { role } = json;
-      if (role === 'admin') {
-        navigate('/AdminDashboard');
-      } else if (role === 'user') {
-        navigate('/UserDashboard');
-      } else if (role === 'contractor') {
-        navigate('/ContractorDashboard');
-      } else {
-        navigate('/UnknownRole');
+      if (querySnapshot.empty) {
+        setError("Invalid username or password.");
+        setIsLoading(false);
+        return;
       }
 
-      setIsLoading(false);
-    } catch (error) {
-      setIsLoading(false);
-      setError(error.response ? error.response.data.error : 'Login failed. Please try again.');
+      let userData = null;
+      querySnapshot.forEach((doc) => {
+        userData = { id: doc.id, ...doc.data() };
+      });
+
+      // Save user details in localStorage
+      localStorage.setItem('user', JSON.stringify(userData));
+
+      // Update global auth context
+      dispatch({ type: 'LOGIN', payload: userData });
+
+      // Redirect based on user role
+      const { Perms } = userData;
+      if (Perms === "ADMIN" || Perms === "SUPERADMIN") {
+        navigate("/Dashboard");
+      } else if (Perms === "REGS") {
+        navigate("/InventoryTracker");
+      } else {
+        navigate("/Unauthorized");
+      }
+      
+    } catch (err) {
+      console.error("Error logging in:", err);
+      setError("An error occurred. Please try again.");
     }
+
+    setIsLoading(false);
   };
 
   return { login, isLoading, error };

@@ -46,7 +46,7 @@ const Dashboard = () => {
       <Box sx={{ display: "flex", marginTop: "64px" }}>
         <Sidebar isHovered={isHovered} setIsHovered={setIsHovered} />
         <Box sx={{ flexGrow: 1, padding: 3, backgroundColor: "#f4f4f4", minHeight: "100vh" }}>
-          <Typography variant="h4" sx={{ fontWeight: "bold", color: "#8B4513", mb: 2 }}>
+          <Typography variant="h4" sx={{ fontWeight: "bold", color: "#96720b", mb: 2 }}>
             Dashboard
           </Typography>
 
