@@ -12,6 +12,7 @@ import { CssBaseline } from '@mui/material';
 // Our custom ProtectedRoute
 import ProtectedRoute from './Components/ProtectedRoute';
 import ManageAccounts from './Pages/ManageAccounts';
+import ActivityLogs from './Pages/ActivityLogs';
 
 function App() {
   return (
@@ -44,6 +45,14 @@ function App() {
           element={
             
               <ManageAccounts />
+            
+          }
+        />
+        <Route
+          path="/Logs"
+          element={
+            
+              <ActivityLogs />
             
           }
         />

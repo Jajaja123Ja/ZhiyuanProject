@@ -1,22 +1,23 @@
-import { Navigate } from "react-router-dom";
-import { useAuthContext } from "../hooks/useAuthContext";
+import { Navigate } from 'react-router-dom';
+import { useAuthContext } from '../hooks/useAuthContext';
 
 const ProtectedRoute = ({ allowedRoles, children }) => {
-  const { user } = useAuthContext();
-
-  // If not logged in, redirect to Login
-  if (!user) {
-    return <Navigate to="/login" />;
-  }
-
-  // Check if user's role is in the allowedRoles prop
-  if (!allowedRoles.includes(user.Perms)) {
-    // If a "REGS" tries to go to an ADMIN route, for example, redirect them somewhere
-    return <Navigate to="/InventoryTracker" />;
-  }
-
-  // If role is allowed, render the protected component
-  return children;
-};
+    const { user, authIsReady } = useAuthContext();
+  
+    // If we haven't finished loading the user from localStorage, don't render yet
+    if (!authIsReady) {
+      return <div>Loading...</div>; 
+    }
+  
+    if (!user) {
+      return <Navigate to="/login" />;
+    }
+    if (!allowedRoles.includes(user.Perms)) {
+      return <Navigate to="/InventoryTracker" />;
+    }
+  
+    return children;
+  };
+  
 
 export default ProtectedRoute;

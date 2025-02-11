@@ -1,5 +1,5 @@
 import { db } from "../firebase"; // Ensure correct Firebase config path
-import { collection, query, where, getDocs, updateDoc, doc, addDoc } from "firebase/firestore";
+import { collection, query, where, getDocs, updateDoc, doc, addDoc, serverTimestamp } from "firebase/firestore";
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -23,6 +23,7 @@ import {
 } from "@mui/material";
 import Navbar from "../Components/Navbar";
 import Sidebar from "../Components/Sidebar";
+import { useAuthContext } from "../hooks/useAuthContext";
 
 const categories = [
   "In (Delivery)",
@@ -72,6 +73,7 @@ const [updatedItem, setUpdatedItem] = useState({});     // holds fields being ed
 // For delete confirmation:
 const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 const [entryToDelete, setEntryToDelete] = useState(null);
+const { user } = useAuthContext();
 
 
   const tabDataMap = {
@@ -278,7 +280,19 @@ const cancelEdit = () => {
             PRODUCT: productName, // Automatically fetched from Inventory
             QTY: qty,
             DATE: newEntry.date, 
+            CREATED_BY: user?.User || "unknown",
+            CREATED_AT: serverTimestamp(),
           });
+          + // 🔹 Log the "Add" action
+ await addDoc(collection(db, "Logs"), {
+  user: user?.User || "unknown",
+  action: `Added new entry to OutSale with code=${newEntry.code.trim()}`,
+   timestamp: serverTimestamp(),
+   details: {
+     qty,
+     product: productName,
+   },
+ });
         } 
         else if (categories[selectedTab] === "In (Delivery)") {
           updatedInDelivery += qty;
@@ -289,6 +303,18 @@ const cancelEdit = () => {
             PRODUCT: productName, // Automatically fetched from Inventory
             QTY: qty,
             DATE: newEntry.date, 
+            CREATED_BY: user?.User || "unknown",
+            CREATED_AT: serverTimestamp(),
+          });
+          + // 🔹 Log the "Add" action
+          await addDoc(collection(db, "Logs"), {
+           user: user?.User || "unknown",
+           action: `Added new entry to InDelivery with code=${newEntry.code.trim()}`,
+            timestamp: serverTimestamp(),
+            details: {
+              qty,
+              product: productName,
+            },
           });
         } 
         else if (categories[selectedTab] === "In (RTS)") {
@@ -299,6 +325,8 @@ const cancelEdit = () => {
             PRODUCT: productName, // Automatically fetched from Inventory
             QTY: qty,
             DATE: newEntry.date, 
+            CREATED_BY: user?.User || "unknown",
+            CREATED_AT: serverTimestamp(),
           });
         }
   

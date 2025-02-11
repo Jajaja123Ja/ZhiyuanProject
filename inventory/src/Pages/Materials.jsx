@@ -13,6 +13,7 @@ import {
   Typography,
   MenuItem
 } from "@mui/material";
+import { serverTimestamp } from "firebase/firestore";
 
 import AddIcon from "@mui/icons-material/Add";
 import { useAuthContext } from "../hooks/useAuthContext";
@@ -131,6 +132,16 @@ const Materials = () => {
       // ✅ Show success modal
       setSuccessMessage("Item successfully deleted!");
       setSuccessModalOpen(true);
+         // 🔹 Add a log entry
+     await addDoc(collection(db, "Logs"), {
+       user: user?.User || "unknown",
+       action: `Deleted material ID=${itemToDelete.id}`,
+     timestamp: serverTimestamp(),
+       details: {
+         code: itemToDelete.CODE,
+        productName: itemToDelete.PRODUCTNAME,
+        },
+    });
     } catch (error) {
       console.error("Error deleting item:", error);
       alert("Failed to delete item.");
@@ -149,6 +160,14 @@ const Materials = () => {
       // ✅ Show success modal
       setSuccessMessage("Item successfully updated!");
       setSuccessModalOpen(true);
+      // 🔹 Add a log entry
+     await addDoc(collection(db, "Logs"), {
+         user: user?.User || "unknown",
+         action: `Updated material ID=${editingItem}`,
+       timestamp: serverTimestamp(),
+         oldData: {},      // if you want
+        newData: updatedItem,
+       });
     } catch (error) {
       console.error("Error updating item:", error);
       alert("Failed to update item.");
@@ -184,6 +203,16 @@ const Materials = () => {
       // ✅ Show success modal
       setSuccessMessage("Item successfully added to Inventory!");
       setSuccessModalOpen(true);
+     
+     await addDoc(collection(db, "Logs"), {
+         user: user?.User || "unknown",
+         action: `Created new material code=${newMaterial.CODE}`,
+         timestamp: serverTimestamp(),
+         details: {
+           productName: newMaterial.PRODUCTNAME,
+           brand: newMaterial.BRAND,
+         },
+       });
     } catch (error) {
       console.error("Error adding item:", error);
       alert("Error adding item to Firestore.");

@@ -94,6 +94,19 @@ const Sidebar = ({ isHovered, setIsHovered }) => {
                   {isHovered && <ListItemText primary="Manage Accounts" />}
                 </ListItem>
               )}
+              
+             {(user?.Perms === "ADMIN" || user?.Perms === "SUPERADMIN") && (
+               <ListItem
+                button
+                onClick={() => navigate("/Logs")}
+                 sx={{ cursor: "pointer" }}
+              >
+                 <ListItemIcon>
+                  
+                 </ListItemIcon>
+                 {isHovered && <ListItemText primary="Logs" />}
+               </ListItem>
+            )}
             </>
           )}
 
