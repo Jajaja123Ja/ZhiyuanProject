@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Box, Typography } from '@mui/material';
+import { Box, Typography, Container } from '@mui/material';
 import HeroImage from "../assets/zhiyuan.jpg";
 import Header from '../Components/Header';
 
@@ -7,20 +7,15 @@ const Homepage = () => {
     const [isTextLoaded, setIsTextLoaded] = useState(false);
 
     useEffect(() => {
-
         const textLoadTimeout = setTimeout(() => {
             setIsTextLoaded(true);
         }, 300);
-        return () => {
-            clearTimeout(textLoadTimeout);
-        };
+        return () => clearTimeout(textLoadTimeout);
     }, []);
 
     return (
-        <Box sx={{ width: '100%', height: '100vh', overflow: 'hidden' }}>
-
+        <Box sx={{ width: '100%', height: '100vh', overflow: 'hidden', position: 'relative' }}>
             <Header />
-
             <Box
                 sx={{
                     position: 'relative',
@@ -33,19 +28,33 @@ const Homepage = () => {
                     mt: '64px',
                 }}
             >
-                <img
-                    src={HeroImage}
-                    alt="Hero"
-                    style={{
+                {/* Background Image */}
+                <Box
+                    sx={{
                         position: 'absolute',
-                        width: '50%',
+                        width: '100%',
                         height: '100%',
-                        objectFit: 'cover',
-                        objectPosition: 'center',
+                        backgroundImage: `url(${HeroImage})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        filter: 'brightness(0.7)',
                         zIndex: -1,
                     }}
                 />
+
+                {/* Gradient Overlay */}
                 <Box
+                    sx={{
+                        position: 'absolute',
+                        width: '100%',
+                        height: '100%',
+                        background: 'linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.7))',
+                        zIndex: -1,
+                    }}
+                />
+
+                {/* Text Content */}
+                <Container
                     sx={{
                         textAlign: 'center',
                         color: 'white',
@@ -55,31 +64,27 @@ const Homepage = () => {
                     }}
                 >
                     <Typography
-                        variant="h1"
+                        variant="h2"
                         component="h1"
                         sx={{
                             fontWeight: 'bold',
-                            mb: 1,
-                            color: 'black', 
-                            textShadow: '2px 2px 8px rgba(0, 0, 0, 0.5)',
+                            mb: 2,
+                            textShadow: '3px 3px 12px rgba(0, 0, 0, 0.6)',
                         }}
                     >
-                        {/* DO NOT TOUCH THE CODE  */}
                         Explore Quality Products Across Sports and Beauty
                     </Typography>
                     <Typography
-                        variant="h1"
+                        variant="h4"
                         component="h2"
                         sx={{
-                            color: 'black', // Same white for consistency
+                            fontWeight: '300',
                             textShadow: '2px 2px 8px rgba(0, 0, 0, 0.5)',
                         }}
                     >
-                        {/* THANK YOU!!!!!!!!!!!!!!!!! - MHYNE */}
                         Your Trusted Source for Premium Imports
                     </Typography>
-
-                </Box>
+                </Container>
             </Box>
         </Box>
     );

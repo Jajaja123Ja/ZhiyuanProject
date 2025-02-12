@@ -11,10 +11,14 @@ import {
   TableRow,
   TextField,
   Typography,
-  MenuItem
+  MenuItem,
+  Chip,
+  Select,
 } from "@mui/material";
 import { serverTimestamp } from "firebase/firestore";
-
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import SearchIcon from "@mui/icons-material/Search";
+import InputAdornment from "@mui/material/InputAdornment";
 import AddIcon from "@mui/icons-material/Add";
 import { useAuthContext } from "../hooks/useAuthContext";
 import Navbar from "../Components/Navbar";
@@ -31,14 +35,19 @@ import {
   doc,
   query,
   where,
-  updateDoc
+  updateDoc,
 } from "firebase/firestore";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import { IconButton, Tooltip } from "@mui/material";
 
 
 const Materials = () => {
   const [materials, setMaterials] = useState([]);
   const { user } = useAuthContext();
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState(""); // New debounced state
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
@@ -46,74 +55,84 @@ const Materials = () => {
   const [updatedItem, setUpdatedItem] = useState({});
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
-  const [brandFilter, setBrandFilter] = useState(""); 
+  const [brandFilter, setBrandFilter] = useState("");
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [totalItems, setTotalItems] = useState(0);
-const [brandCounts, setBrandCounts] = useState({
-  BLM: 0,
-  KL: 0,
-  PERI: 0,
-});
+  const [brandCounts, setBrandCounts] = useState({
+    BLM: 0,
+    KL: 0,
+    PERI: 0,
+  });
 
-const [currentPage, setCurrentPage] = useState(0);
-const itemsPerPage = 10;
-
-
+  const [currentPage, setCurrentPage] = useState(0);
+  const itemsPerPage = 10;
 
 
+  useEffect(() => {
+    const delayDebounce = setTimeout(() => {
+      setDebouncedSearch(searchTerm.toLowerCase().trim());
+    }, 300); // 300ms delay for better performance
 
-useEffect(() => {
-  const fetchMaterials = async () => {
-    setLoading(true);
-    try {
-      const inventoryCollection = collection(db, "Inventory");
-      const snapshot = await getDocs(inventoryCollection);
-      const realData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        CODE: doc.data().CODE || "",
-        CATEGORY: doc.data().CATEGORY || "",
-        BRAND: doc.data().BRAND || "",
-        PRODUCTNAME: doc.data().PRODUCTNAME || "",
-        TIPSIZE: doc.data().TIPSIZE || "",
-        PRICE: doc.data().PRICE || "",
-        OPENINGSTOCK: doc.data().OPENINGSTOCK || 0,
-        INDELIVERY: doc.data().INDELIVERY || 0,
-        OUTSALE: doc.data().OUTSALE || 0,
-        ENDINGSTOCK: doc.data().ENDINGSTOCK || 0,
-        STATUS: doc.data().STATUS || "OK",
-        IMAGE_URL: doc.data().IMAGE_URL || "",
-      }));
+    return () => clearTimeout(delayDebounce);
+  }, [searchTerm]);
 
-      setMaterials(realData);
-      setTotalItems(realData.length); // Set total number of items
 
-      // Count items per brand
-      const brandCounter = {
-        BLM: realData.filter((item) => item.CODE.startsWith("BLM")).length,
-        KL: realData.filter((item) => item.CODE.startsWith("KL")).length,
-        PERI: realData.filter((item) => item.CODE.startsWith("PERI")).length,
-      };
-      setBrandCounts(brandCounter);
-    } catch (error) {
-      console.error("Error fetching materials:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  fetchMaterials();
-}, []);
+  useEffect(() => {
+    const fetchMaterials = async () => {
+      setLoading(true);
+      try {
+        const inventoryCollection = collection(db, "Inventory");
+        const snapshot = await getDocs(inventoryCollection);
+        const realData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          CODE: doc.data().CODE || "",
+          CATEGORY: doc.data().CATEGORY || "",
+          BRAND: doc.data().BRAND || "",
+          PRODUCTNAME: doc.data().PRODUCTNAME || "",
+          TIPSIZE: doc.data().TIPSIZE || "",
+          PRICE: doc.data().PRICE || "",
+          OPENINGSTOCK: doc.data().OPENINGSTOCK || 0,
+          INDELIVERY: doc.data().INDELIVERY || 0,
+          OUTSALE: doc.data().OUTSALE || 0,
+          ENDINGSTOCK: doc.data().ENDINGSTOCK || 0,
+          STATUS: doc.data().STATUS || "OK",
+          IMAGE_URL: doc.data().IMAGE_URL || "",
+        }));
+
+        setMaterials(realData);
+        setTotalItems(realData.length); // Set total number of items
+
+        // Count items per brand
+        const brandCounter = {
+          BLM: realData.filter((item) => item.CODE.startsWith("BLM")).length,
+          KL: realData.filter((item) => item.CODE.startsWith("KL")).length,
+          PERI: realData.filter((item) => item.CODE.startsWith("PERI")).length,
+        };
+        setBrandCounts(brandCounter);
+      } catch (error) {
+        console.error("Error fetching materials:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMaterials();
+  }, []);
 
 
   const filterByBrand = (brand) => {
     setBrandFilter(brand);
+    setCurrentPage(0); // Reset to first page when brand filter changes
   };
 
-  // Function to reset the filter
+  // Function to reset the filter and pagination
   const resetFilter = () => {
     setBrandFilter("");
+    setCurrentPage(0); // Reset pagination on filter reset
   };
+
 
   const handleEdit = (item) => {
     setEditingItem(item.id); // Store the ID of the editing item
@@ -152,22 +171,61 @@ useEffect(() => {
       // ✅ Show success modal
       setSuccessMessage("Item successfully deleted!");
       setSuccessModalOpen(true);
-         // 🔹 Add a log entry
-     await addDoc(collection(db, "Logs"), {
-       user: user?.User || "unknown",
-       action: `Deleted material ID=${itemToDelete.id}`,
-     timestamp: serverTimestamp(),
-       details: {
-         code: itemToDelete.CODE,
-        productName: itemToDelete.PRODUCTNAME,
+      // 🔹 Add a log entry
+      await addDoc(collection(db, "Logs"), {
+        user: user?.User || "unknown",
+        action: `Deleted material ID=${itemToDelete.id}`,
+        timestamp: serverTimestamp(),
+        details: {
+          code: itemToDelete.CODE,
+          productName: itemToDelete.PRODUCTNAME,
         },
-    });
+      });
     } catch (error) {
       console.error("Error deleting item:", error);
       alert("Failed to delete item.");
     }
   };
 
+  const tableHeaderStyle = {
+    backgroundColor: "#3f5930",
+    color: "white",
+    fontWeight: "bold",
+    fontSize: "15px",
+  };
+
+  const statusStyles = {
+    OK: {
+      backgroundColor: "green",
+      color: "white",
+      width: "100px", // Ensures uniform width
+      height: "40px", // Ensures uniform height
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      fontWeight: "bold",
+      borderRadius: "8px",
+      fontSize: "14px",
+    },
+    RESTOCK: {
+      backgroundColor: "red",
+      color: "white",
+      width: "100px",
+      height: "40px",
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      fontWeight: "bold",
+      borderRadius: "8px",
+      fontSize: "14px",
+    },
+  };
+
+
+
+  const actionButtonStyle = {
+    margin: "5px",
+  };
 
 
   // 🔹 Save Edits to Firestore
@@ -181,13 +239,13 @@ useEffect(() => {
       setSuccessMessage("Item successfully updated!");
       setSuccessModalOpen(true);
       // 🔹 Add a log entry
-     await addDoc(collection(db, "Logs"), {
-         user: user?.User || "unknown",
-         action: `Updated material ID=${editingItem}`,
-       timestamp: serverTimestamp(),
-         oldData: {},      // if you want
+      await addDoc(collection(db, "Logs"), {
+        user: user?.User || "unknown",
+        action: `Updated material ID=${editingItem}`,
+        timestamp: serverTimestamp(),
+        oldData: {},      // if you want
         newData: updatedItem,
-       });
+      });
     } catch (error) {
       console.error("Error updating item:", error);
       alert("Failed to update item.");
@@ -199,7 +257,7 @@ useEffect(() => {
 
   const handleCreate = async (newMaterial) => {
     try {
-      const storage = getStorage(); // Initialize Firebase Storage
+      const storage = getStorage(); // ✅ Initialize Firebase Storage
       let imageUrl = "";
 
       if (newMaterial.IMAGE) {
@@ -223,22 +281,21 @@ useEffect(() => {
       // ✅ Show success modal
       setSuccessMessage("Item successfully added to Inventory!");
       setSuccessModalOpen(true);
-     
-     await addDoc(collection(db, "Logs"), {
-         user: user?.User || "unknown",
-         action: `Created new material code=${newMaterial.CODE}`,
-         timestamp: serverTimestamp(),
-         details: {
-           productName: newMaterial.PRODUCTNAME,
-           brand: newMaterial.BRAND,
-         },
-       });
+
+      await addDoc(collection(db, "Logs"), {
+        user: user?.User || "unknown",
+        action: `Created new material code=${newMaterial.CODE}`,
+        timestamp: serverTimestamp(),
+        details: {
+          productName: newMaterial.PRODUCTNAME,
+          brand: newMaterial.BRAND,
+        },
+      });
     } catch (error) {
       console.error("Error adding item:", error);
       alert("Error adding item to Firestore.");
     }
   };
-
 
 
   return (
@@ -269,13 +326,25 @@ useEffect(() => {
           </Typography>
 
           <TextField
-            label="Search Item..."
+            label="Search..."
             variant="outlined"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(0);
+            }}
             fullWidth
             sx={{ mb: 2, backgroundColor: "white" }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
           />
+
+
 
           <Button
             variant="contained"
@@ -290,25 +359,25 @@ useEffect(() => {
             Create New Item
           </Button>
           <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
-  <Typography variant="h6">
-    Total Items: <strong>{totalItems}</strong>
-  </Typography>
+            <Typography variant="h6">
+              Total Items: <strong>{totalItems}</strong>
+            </Typography>
 
-  <Box sx={{ display: "flex", gap: 2 }}>
-    <Button variant="contained" color="primary" onClick={() => filterByBrand("BLM")}>
-      BilMagic ({brandCounts.BLM})
-    </Button>
-    <Button variant="contained" color="secondary" onClick={() => filterByBrand("KL")}>
-      Konllen ({brandCounts.KL})
-    </Button>
-    <Button variant="contained" color="success" onClick={() => filterByBrand("PERI")}>
-      Peri ({brandCounts.PERI})
-    </Button>
-    <Button variant="outlined" onClick={resetFilter}>
-      Reset Filter
-    </Button>
-  </Box>
-</Box>
+            <Box sx={{ display: "flex", gap: 2 }}>
+              <Button variant="contained" color="primary" onClick={() => filterByBrand("BLM")}>
+                BilMagic ({brandCounts.BLM})
+              </Button>
+              <Button variant="contained" color="secondary" onClick={() => filterByBrand("KL")}>
+                Konllen ({brandCounts.KL})
+              </Button>
+              <Button variant="contained" color="success" onClick={() => filterByBrand("PERI")}>
+                Peri ({brandCounts.PERI})
+              </Button>
+              <Button variant="outlined" onClick={resetFilter}>
+                Reset Filter
+              </Button>
+            </Box>
+          </Box>
 
 
 
@@ -322,7 +391,7 @@ useEffect(() => {
                     "CATEGORY",
                     "BRAND",
                     "PRODUCTNAME",
-                    "TIPSIZE",
+                    "MEASUREMENT/COLOR/QTY",
                     "PRICE",
                     "OPENINGSTOCK",
                     "INDELIVERY",
@@ -357,10 +426,20 @@ useEffect(() => {
               <TableBody>
                 {materials
                   .filter((item) => {
-                    if (!brandFilter) return true; // Show all if no filter
-                    return item.CODE.startsWith(brandFilter);
+                    const term = debouncedSearch; // Use debounced value for better performance
+
+                    const matchesSearch =
+                      term === "" ||
+                      item.CODE?.toLowerCase().includes(term) ||
+                      item.CATEGORY?.toLowerCase().includes(term) ||
+                      item.BRAND?.toLowerCase().includes(term) ||
+                      item.PRODUCTNAME?.toLowerCase().includes(term);
+
+                    const matchesBrand = !brandFilter || item.CODE.startsWith(brandFilter);
+
+                    return matchesSearch && matchesBrand;
                   })
-                  .slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage) // Paginate results
+                  .slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage) // Apply pagination after filtering
                   .map((item) => (
                     <TableRow key={item.id}>
                       <TableCell>
@@ -445,76 +524,62 @@ useEffect(() => {
                           item.ENDINGSTOCK
                         )}
                       </TableCell>
-                      <TableCell
-                        sx={{
-                          backgroundColor:
-                            editingItem === item.id
-                              ? updatedItem.STATUS === "RESTOCK"
-                                ? "red"
-                                : "green"
-                              : item.STATUS === "RESTOCK"
-                                ? "red"
-                                : "green",
-                          color: "white",
-                          fontWeight: "bold",
-                          textAlign: "center",
-                          borderRadius: "5px",
-                          padding: "5px",
-                        }}
-                      >
+                      <TableCell align="center">
                         {editingItem === item.id ? (
-                          <Box sx={{ display: "flex", alignItems: "center" }}>
-                            <TextField
-                              select
-                              name="STATUS"
-                              value={updatedItem.STATUS}
-                              onChange={handleInputChange}
-                              variant="outlined"
-                              fullWidth
-                              sx={{
-                                backgroundColor: "white",
-                                borderRadius: "5px",
-                                "& .MuiOutlinedInput-root": {
-                                  "& fieldset": { borderColor: "white" },
-                                  "&:hover fieldset": { borderColor: "gray" },
-                                  "&.Mui-focused fieldset": { borderColor: "gray" },
-                                },
-                              }}
-                            >
-                              <MenuItem value="OK" sx={{ backgroundColor: "green", color: "white" }}>
-                                ✅ OK
-                              </MenuItem>
-                              <MenuItem value="RESTOCK" sx={{ backgroundColor: "red", color: "white" }}>
-                                🚨 RESTOCK
-                              </MenuItem>
-                            </TextField>
-                          </Box>
+                          <TextField
+                            select
+                            name="STATUS"
+                            value={updatedItem.STATUS}
+                            onChange={handleInputChange}
+                            variant="outlined"
+                            fullWidth
+                            sx={{
+                              backgroundColor: "white",
+                              borderRadius: "5px",
+                              "& .MuiOutlinedInput-root": {
+                                "& fieldset": { borderColor: "gray" },
+                                "&:hover fieldset": { borderColor: "gray" },
+                                "&.Mui-focused fieldset": { borderColor: "gray" },
+                              },
+                            }}
+                          >
+                            <MenuItem value="OK">
+                              ✅ OK
+                            </MenuItem>
+                            <MenuItem value="RESTOCK">
+                              🚨 RESTOCK
+                            </MenuItem>
+                          </TextField>
                         ) : (
-                          item.STATUS
+                          <Chip label={item.STATUS} sx={statusStyles[item.STATUS]} />
                         )}
                       </TableCell>
+
 
 
 
                       <TableCell>
                         {editingItem === item.id ? (
                           <>
-                            <Button variant="contained" color="primary" onClick={saveEdit}>
+                            <Button variant="contained" color="primary" onClick={saveEdit} sx={actionButtonStyle}>
                               Save
                             </Button>
-                            <Button variant="contained" color="secondary" onClick={() => setEditingItem(null)}>
+                            <Button variant="contained" color="secondary" onClick={() => setEditingItem(null)} sx={actionButtonStyle}>
                               Cancel
                             </Button>
                           </>
                         ) : (
                           <>
-                            <Button variant="outlined" onClick={() => handleEdit(item)}>
-                              Edit
-                            </Button>
-                            <Button variant="contained" color="error" onClick={() => handleDeleteConfirm(item)}>
-                              Delete
-                            </Button>
-
+                            <Tooltip title="Edit">
+                              <IconButton onClick={() => handleEdit(item)} color="primary">
+                                <EditIcon />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Delete">
+                              <IconButton onClick={() => handleDeleteConfirm(item)} color="error">
+                                <DeleteIcon />
+                              </IconButton>
+                            </Tooltip>
                           </>
                         )}
                       </TableCell>
@@ -525,30 +590,36 @@ useEffect(() => {
             </Table>
           </TableContainer>
           <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", mt: 2 }}>
-  <Button
-    variant="contained"
-    color="secondary"
-    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 0))}
-    disabled={currentPage === 0}
-    sx={{ mr: 2 }}
-  >
-    Previous
-  </Button>
+            <Button
+              variant="contained"
+              color="secondary"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 0))}
+              disabled={currentPage === 0}
+              sx={{ mr: 2 }}
+            >
+              Previous
+            </Button>
 
-  <Typography variant="body1">
-    Page {currentPage + 1} of {Math.ceil(materials.length / itemsPerPage)}
-  </Typography>
+            <Select
+              value={currentPage}
+              onChange={(e) => setCurrentPage(e.target.value)}
+              sx={{ mx: 2 }}
+            >
+              {Array.from({ length: Math.ceil(materials.length / itemsPerPage) }, (_, i) => (
+                <MenuItem key={i} value={i}>Page {i + 1}</MenuItem>
+              ))}
+            </Select>
 
-  <Button
-    variant="contained"
-    color="primary"
-    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, Math.ceil(materials.length / itemsPerPage) - 1))}
-    disabled={(currentPage + 1) * itemsPerPage >= materials.length}
-    sx={{ ml: 2 }}
-  >
-    Next
-  </Button>
-</Box>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, Math.ceil(materials.length / itemsPerPage) - 1))}
+              disabled={(currentPage + 1) * itemsPerPage >= materials.length}
+              sx={{ ml: 2 }}
+            >
+              Next
+            </Button>
+          </Box>
 
 
           <ConfirmDeleteMaterialModal

@@ -291,6 +291,7 @@ const cancelEdit = () => {
    details: {
      qty,
      product: productName,
+     date
    },
  });
         } 

@@ -35,6 +35,7 @@ const CreateMaterialModal = ({ show, handleClose, handleSave }) => {
 
   const [image, setImage] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [customBrand, setCustomBrand] = useState(false); // Track if the user wants a custom brand
 
   // Handle text input changes
   const handleChange = (e) => {
@@ -91,13 +92,13 @@ const CreateMaterialModal = ({ show, handleClose, handleSave }) => {
         IMAGE_URL: "" // Reset to empty
       });
       setImage(null);
+      setCustomBrand(false); // Reset custom brand option
     } catch (error) {
       console.error("Error uploading image:", error);
       alert("Image upload failed. Please try again.");
       setUploading(false);
     }
   };
-  
 
   return (
     <Modal open={show} onClose={handleClose}>
@@ -106,20 +107,53 @@ const CreateMaterialModal = ({ show, handleClose, handleSave }) => {
           Create Material
         </Typography>
 
-        {/* Dynamic Form Fields */}
-        {Object.keys(material).map((key) => (
-          key !== "STATUS" && key !== "IMAGE_URL" ? (
-            <TextField
-              key={key}
-              label={key}
-              name={key}
-              value={material[key]}
-              onChange={handleChange}
-              fullWidth
-              margin="normal"
-            />
-          ) : null
+        {/* CODE, CATEGORY, PRODUCT NAME, etc. */}
+        {["CODE", "CATEGORY", "PRODUCTNAME", "TIPSIZE", "PRICE", "OPENINGSTOCK", "INDELIVERY", "OUTSALE", "ENDINGSTOCK"].map((key) => (
+          <TextField
+            key={key}
+            label={key}
+            name={key}
+            value={material[key]}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+          />
         ))}
+
+        {/* BRAND Dropdown or Custom Text Input */}
+        <FormControl fullWidth margin="normal">
+          <InputLabel>Brand</InputLabel>
+          <Select
+            name="BRAND"
+            value={customBrand ? "Other" : material.BRAND}
+            onChange={(e) => {
+              if (e.target.value === "Other") {
+                setCustomBrand(true);
+                setMaterial({ ...material, BRAND: "" }); // Reset brand value
+              } else {
+                setCustomBrand(false);
+                setMaterial({ ...material, BRAND: e.target.value });
+              }
+            }}
+          >
+            <MenuItem value="BilMagic">BilMagic</MenuItem>
+            <MenuItem value="Konllen">Konllen</MenuItem>
+            <MenuItem value="Peri">Peri</MenuItem>
+            <MenuItem value="Other">Other</MenuItem>
+          </Select>
+        </FormControl>
+
+        {/* Show text field for custom brand if "Other" is selected */}
+        {customBrand && (
+          <TextField
+            label="Enter Custom Brand"
+            name="BRAND"
+            value={material.BRAND}
+            onChange={handleChange}
+            fullWidth
+            margin="normal"
+          />
+        )}
 
         {/* Status Dropdown */}
         <FormControl fullWidth margin="normal">

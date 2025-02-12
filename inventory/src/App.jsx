@@ -28,9 +28,9 @@ function App() {
         <Route
           path="/contacts"
           element={
-            <ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}>
+            
               <Contacts />
-            </ProtectedRoute>
+            
           }
         />
         <Route
