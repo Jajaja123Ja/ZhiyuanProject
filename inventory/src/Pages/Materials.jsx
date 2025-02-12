@@ -46,45 +46,62 @@ const Materials = () => {
   const [updatedItem, setUpdatedItem] = useState({});
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState(null);
-  const [brandFilter, setBrandFilter] = useState(""); // Store selected brand
+  const [brandFilter, setBrandFilter] = useState(""); 
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [totalItems, setTotalItems] = useState(0);
+const [brandCounts, setBrandCounts] = useState({
+  BLM: 0,
+  KL: 0,
+  PERI: 0,
+});
 
 
 
 
-  useEffect(() => {
-    const fetchMaterials = async () => {
-      setLoading(true);
-      try {
-        const inventoryCollection = collection(db, "Inventory");
-        const snapshot = await getDocs(inventoryCollection);
-        const realData = snapshot.docs.map((doc) => ({
-          id: doc.id, // Firestore document ID (for internal use)
-          CODE: doc.data().CODE || "",
-          CATEGORY: doc.data().CATEGORY || "",
-          BRAND: doc.data().BRAND || "",
-          PRODUCTNAME: doc.data().PRODUCTNAME || "",
-          TIPSIZE: doc.data().TIPSIZE || "",
-          PRICE: doc.data().PRICE || "",
-          OPENINGSTOCK: doc.data().OPENINGSTOCK || 0,
-          INDELIVERY: doc.data().INDELIVERY || 0,
-          OUTSALE: doc.data().OUTSALE || 0,
-          ENDINGSTOCK: doc.data().ENDINGSTOCK || 0,
-          STATUS: doc.data().STATUS || "OK",
-          IMAGE_URL: doc.data().IMAGE_URL || "",
-        }));
 
-        setMaterials(realData);
-      } catch (error) {
-        console.error("Error fetching materials:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+useEffect(() => {
+  const fetchMaterials = async () => {
+    setLoading(true);
+    try {
+      const inventoryCollection = collection(db, "Inventory");
+      const snapshot = await getDocs(inventoryCollection);
+      const realData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        CODE: doc.data().CODE || "",
+        CATEGORY: doc.data().CATEGORY || "",
+        BRAND: doc.data().BRAND || "",
+        PRODUCTNAME: doc.data().PRODUCTNAME || "",
+        TIPSIZE: doc.data().TIPSIZE || "",
+        PRICE: doc.data().PRICE || "",
+        OPENINGSTOCK: doc.data().OPENINGSTOCK || 0,
+        INDELIVERY: doc.data().INDELIVERY || 0,
+        OUTSALE: doc.data().OUTSALE || 0,
+        ENDINGSTOCK: doc.data().ENDINGSTOCK || 0,
+        STATUS: doc.data().STATUS || "OK",
+        IMAGE_URL: doc.data().IMAGE_URL || "",
+      }));
 
-    fetchMaterials();
-  }, []);
+      setMaterials(realData);
+      setTotalItems(realData.length); // Set total number of items
+
+      // Count items per brand
+      const brandCounter = {
+        BLM: realData.filter((item) => item.CODE.startsWith("BLM")).length,
+        KL: realData.filter((item) => item.CODE.startsWith("KL")).length,
+        PERI: realData.filter((item) => item.CODE.startsWith("PERI")).length,
+      };
+      setBrandCounts(brandCounter);
+    } catch (error) {
+      console.error("Error fetching materials:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchMaterials();
+}, []);
+
 
   const filterByBrand = (brand) => {
     setBrandFilter(brand);
@@ -269,20 +286,27 @@ const Materials = () => {
           >
             Create New Item
           </Button>
-          <Box sx={{ display: "flex", gap: 2, mb: 2 }}>
-            <Button variant="contained" color="primary" onClick={() => filterByBrand("BLM")}>
-              BilMagic
-            </Button>
-            <Button variant="contained" color="secondary" onClick={() => filterByBrand("KL")}>
-              Konllen
-            </Button>
-            <Button variant="contained" color="success" onClick={() => filterByBrand("PERI")}>
-              Peri
-            </Button>
-            <Button variant="outlined" onClick={resetFilter}>
-              Reset Filter
-            </Button>
-          </Box>
+          <Box sx={{ display: "flex", justifyContent: "space-between", mb: 2 }}>
+  <Typography variant="h6">
+    Total Items: <strong>{totalItems}</strong>
+  </Typography>
+
+  <Box sx={{ display: "flex", gap: 2 }}>
+    <Button variant="contained" color="primary" onClick={() => filterByBrand("BLM")}>
+      BilMagic ({brandCounts.BLM})
+    </Button>
+    <Button variant="contained" color="secondary" onClick={() => filterByBrand("KL")}>
+      Konllen ({brandCounts.KL})
+    </Button>
+    <Button variant="contained" color="success" onClick={() => filterByBrand("PERI")}>
+      Peri ({brandCounts.PERI})
+    </Button>
+    <Button variant="outlined" onClick={resetFilter}>
+      Reset Filter
+    </Button>
+  </Box>
+</Box>
+
 
 
           <TableContainer component={Paper} sx={{ maxHeight: 900 }}>

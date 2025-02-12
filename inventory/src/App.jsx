@@ -13,6 +13,7 @@ import { CssBaseline } from '@mui/material';
 import ProtectedRoute from './Components/ProtectedRoute';
 import ManageAccounts from './Pages/ManageAccounts';
 import ActivityLogs from './Pages/ActivityLogs';
+import ExcelUploader from './Components/ExcelUploader';
 
 function App() {
   return (
@@ -45,6 +46,14 @@ function App() {
           element={
             
               <ManageAccounts />
+            
+          }
+        />
+        <Route
+          path="/Upload"
+          element={
+            
+              <ExcelUploader />
             
           }
         />
