@@ -56,6 +56,9 @@ const [brandCounts, setBrandCounts] = useState({
   PERI: 0,
 });
 
+const [currentPage, setCurrentPage] = useState(0);
+const itemsPerPage = 10;
+
 
 
 
@@ -357,6 +360,7 @@ useEffect(() => {
                     if (!brandFilter) return true; // Show all if no filter
                     return item.CODE.startsWith(brandFilter);
                   })
+                  .slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage) // Paginate results
                   .map((item) => (
                     <TableRow key={item.id}>
                       <TableCell>
@@ -520,6 +524,32 @@ useEffect(() => {
 
             </Table>
           </TableContainer>
+          <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", mt: 2 }}>
+  <Button
+    variant="contained"
+    color="secondary"
+    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 0))}
+    disabled={currentPage === 0}
+    sx={{ mr: 2 }}
+  >
+    Previous
+  </Button>
+
+  <Typography variant="body1">
+    Page {currentPage + 1} of {Math.ceil(materials.length / itemsPerPage)}
+  </Typography>
+
+  <Button
+    variant="contained"
+    color="primary"
+    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, Math.ceil(materials.length / itemsPerPage) - 1))}
+    disabled={(currentPage + 1) * itemsPerPage >= materials.length}
+    sx={{ ml: 2 }}
+  >
+    Next
+  </Button>
+</Box>
+
 
           <ConfirmDeleteMaterialModal
             isOpen={deleteModalOpen}
