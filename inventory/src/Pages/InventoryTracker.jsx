@@ -68,15 +68,15 @@ const InventoryTracker = () => {
   const [inDeliveryEntries, setInDeliveryEntries] = useState([]);
   const [inReturnEntries, setInReturnEntries] = useState([]);
   // Right after your other state variables:
-const [editingItem, setEditingItem] = useState(null);   // holds doc ID
-const [updatedItem, setUpdatedItem] = useState({});     // holds fields being edited
+  const [editingItem, setEditingItem] = useState(null);   // holds doc ID
+  const [updatedItem, setUpdatedItem] = useState({});     // holds fields being edited
 
-// For delete confirmation:
-const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-const [entryToDelete, setEntryToDelete] = useState(null);
-const { user } = useAuthContext();
-const [currentPage, setCurrentPage] = useState(1);
-const itemsPerPage = 10; // Adjust as needed
+  // For delete confirmation:
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [entryToDelete, setEntryToDelete] = useState(null);
+  const { user } = useAuthContext();
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10; // Adjust as needed
 
 
 
@@ -89,7 +89,7 @@ const itemsPerPage = 10; // Adjust as needed
     5: entries,              // "Out (Freebies)" – fetch from OutFreebies if you have it
   };
 
-  
+
   useEffect(() => {
     const fetchCollections = async () => {
       try {
@@ -103,7 +103,7 @@ const itemsPerPage = 10; // Adjust as needed
             PRODUCT: doc.data().PRODUCT,
             QTY: doc.data().QTY,
             DATE: doc.data().DATE || "",
-          }));          
+          }));
           setOutSaleEntries(outSaleData);
         }
 
@@ -146,90 +146,90 @@ const itemsPerPage = 10; // Adjust as needed
   }, []);
 
   // When user clicks "Edit" on a row:
-const handleEdit = (entry) => {
-  setEditingItem(entry.id);          // The doc’s Firestore ID
-  setUpdatedItem({ ...entry });      // Copy fields into updatedItem
-};
+  const handleEdit = (entry) => {
+    setEditingItem(entry.id);          // The doc’s Firestore ID
+    setUpdatedItem({ ...entry });      // Copy fields into updatedItem
+  };
 
-// Sync text field changes to updatedItem
-const handleUpdatedItemChange = (e) => {
-  const { name, value } = e.target;
-  setUpdatedItem((prev) => ({
-    ...prev,
-    [name]: value,
-  }));
-};
+  // Sync text field changes to updatedItem
+  const handleUpdatedItemChange = (e) => {
+    const { name, value } = e.target;
+    setUpdatedItem((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
 
-const saveEdit = async () => {
-  try {
-    // Determine which collection this doc belongs to, based on `selectedTab`
-    const collectionName = getCollectionNameForTab(selectedTab);
-    if (!collectionName) {
-      alert("Invalid tab/collection.");
-      return;
-    }
+  const saveEdit = async () => {
+    try {
+      // Determine which collection this doc belongs to, based on `selectedTab`
+      const collectionName = getCollectionNameForTab(selectedTab);
+      if (!collectionName) {
+        alert("Invalid tab/collection.");
+        return;
+      }
 
-    // Update Firestore doc
-    await updateDoc(doc(db, collectionName, editingItem), {
-      // If your Firestore fields are uppercase, match them here:
-      CODE: updatedItem.CODE,
-      PRODUCT: updatedItem.PRODUCT,
-      QTY: updatedItem.QTY,
-      DATE: updatedItem.DATE,
-      // ... any other fields you want to update
-    });
-
-    // Update local state array (e.g., outSaleEntries or inDeliveryEntries)
-    // 1) Grab the existing array for this tab:
-    let currentArray = [...tabDataMap[selectedTab]];
-    
-    // 2) Find the index of the edited doc:
-    const idx = currentArray.findIndex((doc) => doc.id === editingItem);
-    if (idx !== -1) {
-      // 3) Overwrite that item with updatedItem
-      //    (Make sure keys match your local objects, e.g. PRODUCT vs product, etc.)
-      currentArray[idx] = {
-        id: editingItem,
+      // Update Firestore doc
+      await updateDoc(doc(db, collectionName, editingItem), {
+        // If your Firestore fields are uppercase, match them here:
         CODE: updatedItem.CODE,
         PRODUCT: updatedItem.PRODUCT,
         QTY: updatedItem.QTY,
         DATE: updatedItem.DATE,
-      };
-    }
+        // ... any other fields you want to update
+      });
 
-    // 4) Put that updated array back into state
-    //    depending on which tab we’re on
-    switch (selectedTab) {
-      case 0:
-        setInDeliveryEntries(currentArray);
-        break;
-      case 1:
-        setInReturnEntries(currentArray);
-        break;
-      case 3:
-        setOutSaleEntries(currentArray);
-        break;
-      default:
-        setEntries(currentArray);
-        break;
-    }
+      // Update local state array (e.g., outSaleEntries or inDeliveryEntries)
+      // 1) Grab the existing array for this tab:
+      let currentArray = [...tabDataMap[selectedTab]];
 
-    // Reset editing
+      // 2) Find the index of the edited doc:
+      const idx = currentArray.findIndex((doc) => doc.id === editingItem);
+      if (idx !== -1) {
+        // 3) Overwrite that item with updatedItem
+        //    (Make sure keys match your local objects, e.g. PRODUCT vs product, etc.)
+        currentArray[idx] = {
+          id: editingItem,
+          CODE: updatedItem.CODE,
+          PRODUCT: updatedItem.PRODUCT,
+          QTY: updatedItem.QTY,
+          DATE: updatedItem.DATE,
+        };
+      }
+
+      // 4) Put that updated array back into state
+      //    depending on which tab we’re on
+      switch (selectedTab) {
+        case 0:
+          setInDeliveryEntries(currentArray);
+          break;
+        case 1:
+          setInReturnEntries(currentArray);
+          break;
+        case 3:
+          setOutSaleEntries(currentArray);
+          break;
+        default:
+          setEntries(currentArray);
+          break;
+      }
+
+      // Reset editing
+      setEditingItem(null);
+      setUpdatedItem({});
+      // Optionally show a success message
+      alert("Item updated successfully!");
+    } catch (error) {
+      console.error("Error saving edit:", error);
+      alert("Failed to update item.");
+    }
+  };
+
+  // If user clicks "Cancel" while editing
+  const cancelEdit = () => {
     setEditingItem(null);
     setUpdatedItem({});
-    // Optionally show a success message
-    alert("Item updated successfully!");
-  } catch (error) {
-    console.error("Error saving edit:", error);
-    alert("Failed to update item.");
-  }
-};
-
-// If user clicks "Cancel" while editing
-const cancelEdit = () => {
-  setEditingItem(null);
-  setUpdatedItem({});
-};
+  };
 
 
   const handleTabChange = (_, newValue) => {
@@ -245,27 +245,27 @@ const cancelEdit = () => {
       alert("Please fill in all fields.");
       return;
     }
-  
+
     const qty = parseInt(newEntry.qty, 10);
     if (isNaN(qty) || qty <= 0) {
       alert("Quantity must be a valid number greater than zero.");
       return;
     }
-  
+
     try {
       const inventoryRef = collection(db, "Inventory");
       const q = query(inventoryRef, where("CODE", "==", newEntry.code.trim()));
       const querySnapshot = await getDocs(q);
-  
+
       if (!querySnapshot.empty) {
         const productDoc = querySnapshot.docs[0];
         const productData = productDoc.data();
         const productName = productData.PRODUCTNAME || "Unknown Product";
-  
+
         let updatedStock = Number(productData.ENDINGSTOCK || 0);
         let updatedOutSale = Number(productData.OUTSALE || 0);
         let updatedInDelivery = Number(productData.INDELIVERY || 0);
-  
+
         let collectionName = "";
         if (categories[selectedTab] === "In (Delivery)") {
           updatedStock += qty;
@@ -283,7 +283,7 @@ const cancelEdit = () => {
           updatedStock += qty;
           collectionName = "InReturn";
         }
-  
+
         await addDoc(collection(db, collectionName), {
           CODE: newEntry.code.trim(),
           PRODUCT: productName,
@@ -292,14 +292,14 @@ const cancelEdit = () => {
           CREATED_BY: user?.User || "unknown",
           CREATED_AT: serverTimestamp(),
         });
-  
+
         await updateDoc(doc(db, "Inventory", productDoc.id), {
           ENDINGSTOCK: updatedStock,
           OUTSALE: updatedOutSale,
           INDELIVERY: updatedInDelivery,
         });
-  
-       
+
+
         await addDoc(collection(db, "Logs"), {
           user: user?.User || "unknown",
           action: `Added new entry to ${collectionName} with code=${newEntry.code.trim()}`,
@@ -309,12 +309,12 @@ const cancelEdit = () => {
             product: productName,
           },
         });
-  
+
         setEntries([
           ...entries,
           { id: Date.now(), date: newEntry.date, code: newEntry.code, product: productName, qty, category: categories[selectedTab] },
         ]);
-  
+
         setNewEntry({ date: "", code: "", qty: "" });
       } else {
         alert("Product code not found in inventory!");
@@ -324,13 +324,13 @@ const cancelEdit = () => {
       alert("Failed to update stock. Please try again.");
     }
   };
-  
-  
+
+
   const handleDeleteConfirm = (entry) => {
     setEntryToDelete(entry);
     setDeleteModalOpen(true);
   };
-  
+
   const handleDelete = async () => {
     if (!entryToDelete) return;
     try {
@@ -339,13 +339,13 @@ const cancelEdit = () => {
         alert("Invalid tab/collection.");
         return;
       }
-  
+
       await deleteDoc(doc(db, collectionName, entryToDelete.id));
-  
+
       // Remove from local state
       let currentArray = [...tabDataMap[selectedTab]];
       currentArray = currentArray.filter((doc) => doc.id !== entryToDelete.id);
-  
+
       switch (selectedTab) {
         case 0:
           setInDeliveryEntries(currentArray);
@@ -360,7 +360,7 @@ const cancelEdit = () => {
           setEntries(currentArray);
           break;
       }
-  
+
       setDeleteModalOpen(false);
       setEntryToDelete(null);
       alert("Entry deleted!");
@@ -369,8 +369,8 @@ const cancelEdit = () => {
       alert("Failed to delete entry.");
     }
   };
-  
-  
+
+
   const displayedEntries = tabDataMap[selectedTab] || [];
   const totalPages = Math.ceil(displayedEntries.length / itemsPerPage);
 
@@ -378,8 +378,8 @@ const cancelEdit = () => {
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
-  
-  
+
+
   return (
     <>
       <Navbar isHovered={isHovered} />
@@ -423,89 +423,89 @@ const cancelEdit = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-  {paginatedEntries.map((entry, index) => (
-    <TableRow key={index}>
-      <TableCell>
-        {editingItem === entry.id ? (
-          <TextField
-            name="DATE"
-            type="date"
-            value={updatedItem.DATE}
-            onChange={handleUpdatedItemChange}
-          />
-        ) : (
-          entry.DATE
-        )}
-      </TableCell>
-      <TableCell>
-        {editingItem === entry.id ? (
-          <TextField
-            name="product"
-            value={updatedItem.PRODUCT}
-            onChange={handleUpdatedItemChange}
-          />
-        ) : (
-          entry.PRODUCT
-        )}
-      </TableCell>
-      <TableCell>
-        {editingItem === entry.id ? (
-          <TextField
-            name="code"
-            value={updatedItem.CODE}
-            onChange={handleUpdatedItemChange}
-          />
-        ) : (
-          entry.CODE
-        )}
-      </TableCell>
-      <TableCell>
-        {editingItem === entry.id ? (
-          <TextField
-            name="qty"
-            value={updatedItem.QTY}
-            onChange={handleUpdatedItemChange}
-          />
-        ) : (
-          entry.QTY
-        )}
-      </TableCell>
-    </TableRow>
-  ))}
-</TableBody>
-{/* Pagination Controls */}
-<Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", mt: 2 }}>
-  <Button
-    variant="contained"
-    color="secondary"
-    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-    disabled={currentPage === 1}
-    sx={{ mr: 2 }}
-  >
-    Previous
-  </Button>
+                {paginatedEntries.map((entry, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      {editingItem === entry.id ? (
+                        <TextField
+                          name="DATE"
+                          type="date"
+                          value={updatedItem.DATE}
+                          onChange={handleUpdatedItemChange}
+                        />
+                      ) : (
+                        entry.DATE
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editingItem === entry.id ? (
+                        <TextField
+                          name="product"
+                          value={updatedItem.PRODUCT}
+                          onChange={handleUpdatedItemChange}
+                        />
+                      ) : (
+                        entry.PRODUCT
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editingItem === entry.id ? (
+                        <TextField
+                          name="code"
+                          value={updatedItem.CODE}
+                          onChange={handleUpdatedItemChange}
+                        />
+                      ) : (
+                        entry.CODE
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editingItem === entry.id ? (
+                        <TextField
+                          name="qty"
+                          value={updatedItem.QTY}
+                          onChange={handleUpdatedItemChange}
+                        />
+                      ) : (
+                        entry.QTY
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+              {/* Pagination Controls */}
+              <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", mt: 2 }}>
+                <Button
+                  variant="contained"
+                  color="secondary"
+                  onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  sx={{ mr: 2 }}
+                >
+                  Previous
+                </Button>
 
-  <TextField
-    select
-    value={currentPage}
-    onChange={(e) => setCurrentPage(Number(e.target.value))}
-    sx={{ mx: 2, minWidth: 100 }}
-  >
-    {Array.from({ length: totalPages }, (_, i) => (
-      <MenuItem key={i + 1} value={i + 1}>Page {i + 1}</MenuItem>
-    ))}
-  </TextField>
+                <TextField
+                  select
+                  value={currentPage}
+                  onChange={(e) => setCurrentPage(Number(e.target.value))}
+                  sx={{ mx: 2, minWidth: 100 }}
+                >
+                  {Array.from({ length: totalPages }, (_, i) => (
+                    <MenuItem key={i + 1} value={i + 1}>Page {i + 1}</MenuItem>
+                  ))}
+                </TextField>
 
-  <Button
-    variant="contained"
-    color="primary"
-    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
-    disabled={currentPage === totalPages}
-    sx={{ ml: 2 }}
-  >
-    Next
-  </Button>
-</Box>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={currentPage === totalPages}
+                  sx={{ ml: 2 }}
+                >
+                  Next
+                </Button>
+              </Box>
 
 
             </Table>

@@ -11,7 +11,9 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import ReportIcon from "@mui/icons-material/Assessment";
 import TrackChangesIcon from "@mui/icons-material/TrackChanges";
-import PeopleIcon from "@mui/icons-material/People"; // Icon for Manage Accounts
+import PeopleIcon from "@mui/icons-material/People";
+import RestoreIcon from "@mui/icons-material/Restore"; // ✅ Alternative for HistoryIcon
+// import EventNoteIcon from "@mui/icons-material/EventNote"; // Another alternative
 import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "../hooks/useAuthContext";
 
@@ -48,33 +50,21 @@ const Sidebar = ({ isHovered, setIsHovered }) => {
           {/* Only show these if user.Perms is NOT 'REGS' */}
           {user?.Perms !== "REGS" && (
             <>
-              <ListItem
-                button
-                onClick={() => navigate("/dashboard")}
-                sx={{ cursor: "pointer" }}
-              >
+              <ListItem button onClick={() => navigate("/dashboard")} sx={{ cursor: "pointer" }}>
                 <ListItemIcon>
                   <DashboardIcon />
                 </ListItemIcon>
                 {isHovered && <ListItemText primary="Dashboard" />}
               </ListItem>
 
-              <ListItem
-                button
-                onClick={() => navigate("/Materials")}
-                sx={{ cursor: "pointer" }}
-              >
+              <ListItem button onClick={() => navigate("/Materials")} sx={{ cursor: "pointer" }}>
                 <ListItemIcon>
                   <InventoryIcon />
                 </ListItemIcon>
                 {isHovered && <ListItemText primary="Inventory" />}
               </ListItem>
 
-              <ListItem
-                button
-                onClick={() => navigate("/Reports")}
-                sx={{ cursor: "pointer" }}
-              >
+              <ListItem button onClick={() => navigate("/Reports")} sx={{ cursor: "pointer" }}>
                 <ListItemIcon>
                   <ReportIcon />
                 </ListItemIcon>
@@ -83,39 +73,28 @@ const Sidebar = ({ isHovered, setIsHovered }) => {
 
               {/* Manage Accounts: only for ADMIN or SUPERADMIN */}
               {(user?.Perms === "ADMIN" || user?.Perms === "SUPERADMIN") && (
-                <ListItem
-                  button
-                  onClick={() => navigate("/Accounts")}
-                  sx={{ cursor: "pointer" }}
-                >
+                <ListItem button onClick={() => navigate("/Accounts")} sx={{ cursor: "pointer" }}>
                   <ListItemIcon>
                     <PeopleIcon />
                   </ListItemIcon>
                   {isHovered && <ListItemText primary="Manage Accounts" />}
                 </ListItem>
               )}
-              
-             {(user?.Perms === "ADMIN" || user?.Perms === "SUPERADMIN") && (
-               <ListItem
-                button
-                onClick={() => navigate("/Logs")}
-                 sx={{ cursor: "pointer" }}
-              >
-                 <ListItemIcon>
-                  
-                 </ListItemIcon>
-                 {isHovered && <ListItemText primary="Logs" />}
-               </ListItem>
-            )}
+
+              {/* 🔹 Logs: Only visible to ADMIN and SUPERADMIN */}
+              {(user?.Perms === "ADMIN" || user?.Perms === "SUPERADMIN") && (
+                <ListItem button onClick={() => navigate("/Logs")} sx={{ cursor: "pointer" }}>
+                  <ListItemIcon>
+                    <RestoreIcon /> {/* ✅ Alternative for HistoryIcon */}
+                  </ListItemIcon>
+                  {isHovered && <ListItemText primary="Logs" />}
+                </ListItem>
+              )}
             </>
           )}
 
           {/* Always show Inventory Tracker (REGS can see this too) */}
-          <ListItem
-            button
-            onClick={() => navigate("/InventoryTracker")}
-            sx={{ cursor: "pointer" }}
-          >
+          <ListItem button onClick={() => navigate("/InventoryTracker")} sx={{ cursor: "pointer" }}>
             <ListItemIcon>
               <TrackChangesIcon />
             </ListItemIcon>
