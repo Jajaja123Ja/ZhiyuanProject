@@ -1,18 +1,35 @@
 import React, { useState, useEffect } from "react";
-import { Box, Typography, Paper, Grid, Button } from "@mui/material";
-import { Bar, Line, Pie } from "react-chartjs-2";
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend } from "chart.js";
+import { 
+  Box, 
+  Typography, 
+  Paper, 
+  Grid, 
+  TableContainer, 
+  Table, 
+  TableHead, 
+  TableBody, 
+  TableCell, 
+  TableRow, 
+  Pagination, 
+  Button,
+  Select,
+  MenuItem
+} from "@mui/material";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase";
 import Navbar from "../Components/Navbar";
 import Sidebar from "../Components/Sidebar";
 
-// Register chart.js components
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, BarElement, ArcElement, Title, Tooltip, Legend);
-
 const Dashboard = () => {
-  const [salesData, setSalesData] = useState([]);
-  const [stockData, setStockData] = useState(null);
-  const [returnsData, setReturnsData] = useState(null);
+  const [totalStock, setTotalStock] = useState(0);
+  const [itemsSold, setItemsSold] = useState(0);
+  const [returnsCount, setReturnsCount] = useState(0);
+  const [stockData, setStockData] = useState({ sold: 0, restocked: 0, returned: 0 });
   const [isHovered, setIsHovered] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [categoryReport, setCategoryReport] = useState({}); 
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10; // Number of items per page
 
   useEffect(() => {
     fetchDashboardData();
@@ -20,25 +37,50 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const sales = Array.from({ length: 30 }, () => Math.floor(Math.random() * 1000));
-      const stock = {
-        sold: Math.floor(Math.random() * 500),
-        restocked: Math.floor(Math.random() * 300),
-        returned: Math.floor(Math.random() * 200),
-      };
-      const returns = {
-        defective: Math.floor(Math.random() * 50),
-        wrongItem: Math.floor(Math.random() * 30),
-        customerChange: Math.floor(Math.random() * 20),
-      };
+      const inventoryCollection = collection(db, "Inventory");
+      const snapshot = await getDocs(inventoryCollection);
+      const inventory = snapshot.docs.map(doc => ({
+        id: doc.id,
+        CATEGORY: doc.data().CATEGORY || "Uncategorized",
+        ENDINGSTOCK: parseInt(doc.data().ENDINGSTOCK) || 0,
+        OUTSALE: parseInt(doc.data().OUTSALE) || 0,
+        INDELIVERY: parseInt(doc.data().INDELIVERY) || 0,
+      }));
 
-      setSalesData(sales);
-      setStockData(stock);
-      setReturnsData(returns);
+      console.log("Fetched Inventory Data:", inventory);
+
+      const categoryData = {};
+      inventory.forEach((item) => {
+        if (!categoryData[item.CATEGORY]) {
+          categoryData[item.CATEGORY] = { stock: 0, sold: 0, restocked: 0 };
+        }
+        categoryData[item.CATEGORY].stock += item.ENDINGSTOCK;
+        categoryData[item.CATEGORY].sold += item.OUTSALE;
+        categoryData[item.CATEGORY].restocked += item.INDELIVERY;
+      });
+
+      setCategoryReport(categoryData);
+
+      setTotalStock(inventory.reduce((sum, item) => sum + item.ENDINGSTOCK, 0));
+      setItemsSold(inventory.reduce((sum, item) => sum + item.OUTSALE, 0));
+      setStockData({
+        sold: itemsSold,
+        restocked: inventory.reduce((sum, item) => sum + item.INDELIVERY, 0),
+      });
+
+      setLoading(false);
     } catch (error) {
-      console.error("Error fetching dashboard data", error);
+      console.error("Error fetching dashboard data:", error);
     }
   };
+
+  const categoryEntries = Object.entries(categoryReport);
+  const totalPages = Math.ceil(categoryEntries.length / itemsPerPage);
+
+  const displayedCategories = categoryEntries.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <>
@@ -50,85 +92,103 @@ const Dashboard = () => {
             Dashboard
           </Typography>
 
-          <Grid container spacing={2}>
-            {/* KPI Cards */}
-            <Grid item xs={12} md={3}>
-              <Paper sx={{ p: 2, textAlign: "center" }}>
-                <Typography variant="h6">Total Stock</Typography>
-                <Typography variant="h4">1,500</Typography>
-              </Paper>
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <Paper sx={{ p: 2, textAlign: "center" }}>
-                <Typography variant="h6">Items Sold</Typography>
-                <Typography variant="h4">{stockData?.sold}</Typography>
-              </Paper>
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <Paper sx={{ p: 2, textAlign: "center" }}>
-                <Typography variant="h6">Restocked</Typography>
-                <Typography variant="h4">{stockData?.restocked}</Typography>
-              </Paper>
-            </Grid>
-            <Grid item xs={12} md={3}>
-              <Paper sx={{ p: 2, textAlign: "center" }}>
-                <Typography variant="h6">Returns</Typography>
-                <Typography variant="h4">{stockData?.returned}</Typography>
-              </Paper>
-            </Grid>
+          {loading ? (
+            <Typography variant="h6" sx={{ textAlign: "center" }}>Loading Data...</Typography>
+          ) : (
+            <>
+              <Grid container spacing={2}>
+                <Grid item xs={12} md={3}>
+                  <Paper sx={{ p: 2, textAlign: "center" }}>
+                    <Typography variant="h6">Total Stock</Typography>
+                    <Typography variant="h4">{totalStock}</Typography>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Paper sx={{ p: 2, textAlign: "center" }}>
+                    <Typography variant="h6">Items Sold</Typography>
+                    <Typography variant="h4">{itemsSold}</Typography>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Paper sx={{ p: 2, textAlign: "center" }}>
+                    <Typography variant="h6">Restocked</Typography>
+                    <Typography variant="h4">{stockData.restocked}</Typography>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} md={3}>
+                  <Paper sx={{ p: 2, textAlign: "center" }}>
+                    <Typography variant="h6">Returns</Typography>
+                    <Typography variant="h4">{returnsCount}</Typography>
+                  </Paper>
+                </Grid>
+              </Grid>
 
-            {/* Sales Performance Chart */}
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2, height: 350 }}>
-                <Typography variant="h6" sx={{ fontWeight: "bold" }}>Sales Performance (Last 30 Days)</Typography>
-                <Line
-                  data={{
-                    labels: Array.from({ length: 30 }, (_, i) => `Day ${i + 1}`),
-                    datasets: [{
-                      label: "Sales",
-                      data: salesData,
-                      borderColor: "#3f5930",
-                      backgroundColor: "rgba(63, 89, 48, 0.2)",
-                      fill: true,
-                    }],
-                  }}
-                />
-              </Paper>
-            </Grid>
+              {/* Category Report Section */}
+              <Box sx={{ mt: 4 }}>
+                <Typography variant="h6" sx={{ fontWeight: "bold", color: "#3f5930" }}>
+                  Inventory Report by Category
+                </Typography>
+                <TableContainer component={Paper} sx={{ mt: 2 }}>
+                  <Table>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell sx={{ fontWeight: "bold" }}>Category</TableCell>
+                        <TableCell sx={{ fontWeight: "bold" }}>Total Stock</TableCell>
+                        <TableCell sx={{ fontWeight: "bold" }}>Total Sold</TableCell>
+                        <TableCell sx={{ fontWeight: "bold" }}>Total Restocked</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {displayedCategories.map(([category, data]) => (
+                        <TableRow key={category}>
+                          <TableCell>{category}</TableCell>
+                          <TableCell>{data.stock}</TableCell>
+                          <TableCell>{data.sold}</TableCell>
+                          <TableCell>{data.restocked}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
 
-            {/* Stock Movement Chart */}
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2, height: 350 }}>
-                <Typography variant="h6" sx={{ fontWeight: "bold" }}>Stock Movement</Typography>
-                <Bar
-                  data={{
-                    labels: ["Sold", "Restocked", "Returned"],
-                    datasets: [{
-                      label: "Stock Movement",
-                      data: [stockData?.sold, stockData?.restocked, stockData?.returned],
-                      backgroundColor: ["#4caf50", "#ff9800", "#f44336"],
-                    }],
-                  }}
-                />
-              </Paper>
-            </Grid>
+                {/* Pagination Component */}
+                {/* Pagination Controls */}
+<Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", mt: 2 }}>
+  <Button
+    variant="contained"
+    color="secondary"
+    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+    disabled={currentPage === 1}
+    sx={{ mr: 2 }}
+  >
+    Previous
+  </Button>
 
-            {/* Inventory Breakdown */}
-            <Grid item xs={12} md={6}>
-              <Paper sx={{ p: 2, height: 350 }}>
-                <Typography variant="h6" sx={{ fontWeight: "bold" }}>Inventory Breakdown</Typography>
-                <Pie
-                  data={{
-                    labels: ["Available Stock", "Low Stock", "Out of Stock"],
-                    datasets: [{
-                      data: [900, 400, 200],
-                      backgroundColor: ["#4caf50", "#ff9800", "#f44336"],
-                    }],
-                  }}
-                />
-              </Paper>
-            </Grid>
-          </Grid>
+  <Select
+    value={currentPage}
+    onChange={(e) => setCurrentPage(e.target.value)}
+    sx={{ mx: 2, minWidth: 100 }}
+  >
+    {Array.from({ length: totalPages }, (_, i) => (
+      <MenuItem key={i + 1} value={i + 1}>Page {i + 1}</MenuItem>
+    ))}
+  </Select>
+
+  <Button
+    variant="contained"
+    color="primary"
+    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+    disabled={currentPage === totalPages}
+    sx={{ ml: 2 }}
+  >
+    Next
+  </Button>
+</Box>
+
+
+              </Box>
+            </>
+          )}
         </Box>
       </Box>
     </>

@@ -9,7 +9,6 @@ import InventoryTracker from './Pages/InventoryTracker';
 import Dashboard from './Pages/Dashboard';
 import { CssBaseline } from '@mui/material';
 
-// Our custom ProtectedRoute
 import ProtectedRoute from './Components/ProtectedRoute';
 import ManageAccounts from './Pages/ManageAccounts';
 import ActivityLogs from './Pages/ActivityLogs';
@@ -90,7 +89,7 @@ function App() {
           }
         />
 
-        {/* REGULAR user routes (plus ADMIN, SUPERADMIN) */}
+      
         <Route
           path="/InventoryTracker"
           element={

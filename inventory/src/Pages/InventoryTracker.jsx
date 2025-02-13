@@ -20,6 +20,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  MenuItem
 } from "@mui/material";
 import Navbar from "../Components/Navbar";
 import Sidebar from "../Components/Sidebar";
@@ -74,6 +75,9 @@ const [updatedItem, setUpdatedItem] = useState({});     // holds fields being ed
 const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 const [entryToDelete, setEntryToDelete] = useState(null);
 const { user } = useAuthContext();
+const [currentPage, setCurrentPage] = useState(1);
+const itemsPerPage = 10; // Adjust as needed
+
 
 
   const tabDataMap = {
@@ -85,7 +89,7 @@ const { user } = useAuthContext();
     5: entries,              // "Out (Freebies)" – fetch from OutFreebies if you have it
   };
 
-
+  
   useEffect(() => {
     const fetchCollections = async () => {
       try {
@@ -249,7 +253,6 @@ const cancelEdit = () => {
     }
   
     try {
-      // 🔹 Query the Inventory collection for the entered code
       const inventoryRef = collection(db, "Inventory");
       const q = query(inventoryRef, where("CODE", "==", newEntry.code.trim()));
       const querySnapshot = await getDocs(q);
@@ -257,98 +260,62 @@ const cancelEdit = () => {
       if (!querySnapshot.empty) {
         const productDoc = querySnapshot.docs[0];
         const productData = productDoc.data();
-        const productName = productData.PRODUCTNAME || "Unknown Product"; // Fetch correct product name
-  
-        console.log("Fetched Product Data:", productData);
+        const productName = productData.PRODUCTNAME || "Unknown Product";
   
         let updatedStock = Number(productData.ENDINGSTOCK || 0);
         let updatedOutSale = Number(productData.OUTSALE || 0);
         let updatedInDelivery = Number(productData.INDELIVERY || 0);
   
-        if (categories[selectedTab] === "Out (Sale)") {
+        let collectionName = "";
+        if (categories[selectedTab] === "In (Delivery)") {
+          updatedStock += qty;
+          updatedInDelivery += qty;
+          collectionName = "InDelivery";
+        } else if (categories[selectedTab] === "Out (Sale)") {
           updatedStock -= qty;
           updatedOutSale += qty;
-  
+          collectionName = "OutSale";
           if (updatedStock < 0) {
             alert(`Not enough stock! Available: ${productData.ENDINGSTOCK}`);
             return;
           }
-  
-          // ✅ Save to OutSale collection with correct product name
-          await addDoc(collection(db, "OutSale"), {
-            CODE: newEntry.code.trim(),
-            PRODUCT: productName, // Automatically fetched from Inventory
-            QTY: qty,
-            DATE: newEntry.date, 
-            CREATED_BY: user?.User || "unknown",
-            CREATED_AT: serverTimestamp(),
-          });
-          + // 🔹 Log the "Add" action
- await addDoc(collection(db, "Logs"), {
-  user: user?.User || "unknown",
-  action: `Added new entry to OutSale with code=${newEntry.code.trim()}`,
-   timestamp: serverTimestamp(),
-   details: {
-     qty,
-     product: productName,
-     date
-   },
- });
-        } 
-        else if (categories[selectedTab] === "In (Delivery)") {
-          updatedInDelivery += qty;
-  
-          // ✅ Save to InDelivery collection with correct product name
-          await addDoc(collection(db, "InDelivery"), {
-            CODE: newEntry.code.trim(),
-            PRODUCT: productName, // Automatically fetched from Inventory
-            QTY: qty,
-            DATE: newEntry.date, 
-            CREATED_BY: user?.User || "unknown",
-            CREATED_AT: serverTimestamp(),
-          });
-          + // 🔹 Log the "Add" action
-          await addDoc(collection(db, "Logs"), {
-           user: user?.User || "unknown",
-           action: `Added new entry to InDelivery with code=${newEntry.code.trim()}`,
-            timestamp: serverTimestamp(),
-            details: {
-              qty,
-              product: productName,
-            },
-          });
-        } 
-        else if (categories[selectedTab] === "In (RTS)") {
+        } else if (categories[selectedTab] === "In (RTS)") {
           updatedStock += qty;
-
-          await addDoc(collection(db, "InReturn"), {
-            CODE: newEntry.code.trim(),
-            PRODUCT: productName, // Automatically fetched from Inventory
-            QTY: qty,
-            DATE: newEntry.date, 
-            CREATED_BY: user?.User || "unknown",
-            CREATED_AT: serverTimestamp(),
-          });
+          collectionName = "InReturn";
         }
   
-        // ✅ Update the Inventory document properly
+        await addDoc(collection(db, collectionName), {
+          CODE: newEntry.code.trim(),
+          PRODUCT: productName,
+          QTY: qty,
+          DATE: newEntry.date,
+          CREATED_BY: user?.User || "unknown",
+          CREATED_AT: serverTimestamp(),
+        });
+  
         await updateDoc(doc(db, "Inventory", productDoc.id), {
           ENDINGSTOCK: updatedStock,
           OUTSALE: updatedOutSale,
           INDELIVERY: updatedInDelivery,
         });
   
-        console.log(`Updated Firestore: ENDINGSTOCK=${updatedStock}, OUTSALE=${updatedOutSale}, INDELIVERY=${updatedInDelivery}`);
+       
+        await addDoc(collection(db, "Logs"), {
+          user: user?.User || "unknown",
+          action: `Added new entry to ${collectionName} with code=${newEntry.code.trim()}`,
+          timestamp: serverTimestamp(),
+          details: {
+            qty,
+            product: productName,
+          },
+        });
   
-        // ✅ Update UI
         setEntries([
           ...entries,
-          { id: Date.now(), date: newEntry.date, code: newEntry.code, product: productName, qty: qty, category: categories[selectedTab] },
+          { id: Date.now(), date: newEntry.date, code: newEntry.code, product: productName, qty, category: categories[selectedTab] },
         ]);
   
-        // ✅ Reset form
         setNewEntry({ date: "", code: "", qty: "" });
-  
       } else {
         alert("Product code not found in inventory!");
       }
@@ -357,6 +324,7 @@ const cancelEdit = () => {
       alert("Failed to update stock. Please try again.");
     }
   };
+  
   
   const handleDeleteConfirm = (entry) => {
     setEntryToDelete(entry);
@@ -404,6 +372,13 @@ const cancelEdit = () => {
   
   
   const displayedEntries = tabDataMap[selectedTab] || [];
+  const totalPages = Math.ceil(displayedEntries.length / itemsPerPage);
+
+  const paginatedEntries = displayedEntries.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+  
   
   return (
     <>
@@ -447,22 +422,21 @@ const cancelEdit = () => {
                   {/* <TableCell sx={{ color: "white" }}>Actions</TableCell> */}
                 </TableRow>
               </TableHead>
-<TableBody>
-  {displayedEntries.map((entry, index) => (
+              <TableBody>
+  {paginatedEntries.map((entry, index) => (
     <TableRow key={index}>
       <TableCell>
-  {editingItem === entry.id ? (
-    <TextField
-      name="DATE"
-      type="date"
-      value={updatedItem.DATE}
-      onChange={handleUpdatedItemChange}
-    />
-  ) : (
-    entry.DATE
-  )}
-</TableCell>
-
+        {editingItem === entry.id ? (
+          <TextField
+            name="DATE"
+            type="date"
+            value={updatedItem.DATE}
+            onChange={handleUpdatedItemChange}
+          />
+        ) : (
+          entry.DATE
+        )}
+      </TableCell>
       <TableCell>
         {editingItem === entry.id ? (
           <TextField
@@ -496,31 +470,44 @@ const cancelEdit = () => {
           entry.QTY
         )}
       </TableCell>
-     
-      {/* <TableCell>
-  {editingItem === entry.id ? (
-    <>
-      <Button variant="contained" color="primary" onClick={saveEdit}>
-        Save
-      </Button>
-      <Button variant="outlined" onClick={cancelEdit} sx={{ ml: 1 }}>
-        Cancel
-      </Button>
-    </>
-  ) : (
-    <>
-      <Button variant="outlined" onClick={() => handleEdit(entry)} sx={{ mr: 1 }}>
-        Edit
-      </Button>
-      <Button variant="contained" color="error" onClick={() => handleDeleteConfirm(entry)}>
-        Delete
-      </Button>
-    </>
-  )}
-</TableCell> */}
     </TableRow>
   ))}
 </TableBody>
+{/* Pagination Controls */}
+<Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", mt: 2 }}>
+  <Button
+    variant="contained"
+    color="secondary"
+    onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+    disabled={currentPage === 1}
+    sx={{ mr: 2 }}
+  >
+    Previous
+  </Button>
+
+  <TextField
+    select
+    value={currentPage}
+    onChange={(e) => setCurrentPage(Number(e.target.value))}
+    sx={{ mx: 2, minWidth: 100 }}
+  >
+    {Array.from({ length: totalPages }, (_, i) => (
+      <MenuItem key={i + 1} value={i + 1}>Page {i + 1}</MenuItem>
+    ))}
+  </TextField>
+
+  <Button
+    variant="contained"
+    color="primary"
+    onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+    disabled={currentPage === totalPages}
+    sx={{ ml: 2 }}
+  >
+    Next
+  </Button>
+</Box>
+
+
             </Table>
           </TableContainer>
         </Box>

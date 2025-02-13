@@ -67,6 +67,8 @@ const Materials = () => {
 
   const [currentPage, setCurrentPage] = useState(0);
   const itemsPerPage = 10;
+  const [selectedMonth, setSelectedMonth] = useState("");
+  const [monthlyReport, setMonthlyReport] = useState([]);
 
 
   useEffect(() => {
@@ -81,46 +83,118 @@ const Materials = () => {
 
   useEffect(() => {
     const fetchMaterials = async () => {
-      setLoading(true);
-      try {
-        const inventoryCollection = collection(db, "Inventory");
-        const snapshot = await getDocs(inventoryCollection);
-        const realData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          CODE: doc.data().CODE || "",
-          CATEGORY: doc.data().CATEGORY || "",
-          BRAND: doc.data().BRAND || "",
-          PRODUCTNAME: doc.data().PRODUCTNAME || "",
-          TIPSIZE: doc.data().TIPSIZE || "",
-          PRICE: doc.data().PRICE || "",
-          OPENINGSTOCK: doc.data().OPENINGSTOCK || 0,
-          INDELIVERY: doc.data().INDELIVERY || 0,
-          OUTSALE: doc.data().OUTSALE || 0,
-          ENDINGSTOCK: doc.data().ENDINGSTOCK || 0,
-          STATUS: doc.data().STATUS || "OK",
-          IMAGE_URL: doc.data().IMAGE_URL || "",
-        }));
+        setLoading(true);
+        try {
+            const inventoryCollection = collection(db, "Inventory");
+            const snapshot = await getDocs(inventoryCollection);
+            const today = new Date();
+            const isFirstDayOfMonth = today.getDate() === 1;
 
-        setMaterials(realData);
-        setTotalItems(realData.length); // Set total number of items
+            const lastMonth = new Date();
+            lastMonth.setMonth(today.getMonth() - 1);
+            const lastMonthName = lastMonth.toLocaleString("default", { month: "long" });
 
-        // Count items per brand
-        const brandCounter = {
-          BLM: realData.filter((item) => item.CODE.startsWith("BLM")).length,
-          KL: realData.filter((item) => item.CODE.startsWith("KL")).length,
-          PERI: realData.filter((item) => item.CODE.startsWith("PERI")).length,
-        };
-        setBrandCounts(brandCounter);
-      } catch (error) {
-        console.error("Error fetching materials:", error);
-      } finally {
-        setLoading(false);
-      }
+            const reportCollection = collection(db, "MonthlyReports");
+
+            const realData = await Promise.all(snapshot.docs.map(async (docSnapshot) => {
+                const data = docSnapshot.data();
+                const docRef = doc(db, "Inventory", docSnapshot.id);
+
+                let openingStock = parseInt(data.OPENINGSTOCK) || 0;
+                let endingStock = parseInt(data.ENDINGSTOCK) || 0;
+                let inDelivery = parseInt(data.INDELIVERY) || 0;
+                let outSale = parseInt(data.OUTSALE) || 0;
+                let price = parseFloat(data.PRICE) || 0;
+
+                // ✅ Save monthly report and reset stock on first day of month
+                if (isFirstDayOfMonth) {
+                    await addDoc(reportCollection, {
+                        CODE: data.CODE,
+                        PRODUCTNAME: data.PRODUCTNAME,
+                        CATEGORY: data.CATEGORY,
+                        BRAND: data.BRAND,
+                        PRICE: price,
+                        OPENINGSTOCK: openingStock,
+                        INDELIVERY: inDelivery,
+                        OUTSALE: outSale,
+                        ENDINGSTOCK: endingStock,
+                        MONTH: lastMonthName,
+                        YEAR: lastMonth.getFullYear(),
+                        TIMESTAMP: serverTimestamp(),
+                    });
+
+                    // ✅ Reset stock values for new month
+                    openingStock = endingStock;
+                    inDelivery = 0;
+                    outSale = 0;
+
+                    await updateDoc(docRef, {
+                        OPENINGSTOCK: openingStock,
+                        INDELIVERY: inDelivery,
+                        OUTSALE: outSale,
+                        ENDINGSTOCK: openingStock, // Set ENDINGSTOCK same as OPENINGSTOCK initially
+                    });
+                }
+
+                return {
+                    id: docSnapshot.id,
+                    CODE: data.CODE || "",
+                    CATEGORY: data.CATEGORY || "",
+                    BRAND: data.BRAND || "",
+                    PRODUCTNAME: data.PRODUCTNAME || "",
+                    TIPSIZE: data.TIPSIZE || "",
+                    PRICE: price,
+                    OPENINGSTOCK: openingStock,
+                    INDELIVERY: inDelivery,
+                    OUTSALE: outSale,
+                    ENDINGSTOCK: endingStock,
+                    STATUS: data.STATUS || "OK",
+                    IMAGE_URL: data.IMAGE_URL || "",
+                };
+            }));
+
+            // ✅ Set materials and total items
+            setMaterials(realData);
+            setTotalItems(realData.length);
+
+            // ✅ Update brand counts correctly
+            const brandCounter = {
+                BLM: realData.filter((item) => item.CODE.startsWith("BLM")).length,
+                KL: realData.filter((item) => item.CODE.startsWith("KL")).length,
+                PERI: realData.filter((item) => item.CODE.startsWith("PERI")).length,
+            };
+
+            setBrandCounts(brandCounter); // ✅ Updates brand count state
+        } catch (error) {
+            console.error("Error fetching materials:", error);
+        } finally {
+            setLoading(false);
+        }
     };
 
     fetchMaterials();
-  }, []);
+}, []);
 
+
+  const fetchMonthlyReport = async (month, year) => {
+    setLoading(true);
+    try {
+      const reportCollection = collection(db, "MonthlyReports");
+      const q = query(reportCollection, where("MONTH", "==", month), where("YEAR", "==", year));
+      const snapshot = await getDocs(q);
+
+      const reportData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setMonthlyReport(reportData);
+    } catch (error) {
+      console.error("Error fetching monthly reports:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filterByBrand = (brand) => {
     setBrandFilter(brand);
@@ -139,14 +213,51 @@ const Materials = () => {
     setUpdatedItem({ ...item }); // Load current values into the form
   };
 
-  // 🔹 Handle Input Change for Editing
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setUpdatedItem((prev) => ({
-      ...prev,
-      [name]: value, // Update the correct field
-    }));
+  
+    // Allow empty values to prevent auto-reset
+    if (value === "") {
+      setUpdatedItem((prev) => ({
+        ...prev,
+        [name]: "",
+      }));
+      return;
+    }
+  
+    // Check if the field should only allow numbers
+    const numericFields = ["PRICE", "OPENINGSTOCK", "INDELIVERY", "OUTSALE", "ENDINGSTOCK"];
+    
+    if (numericFields.includes(name)) {
+      // Ensure input is numeric only
+      const numericValue = value.replace(/[^0-9]/g, ""); // Remove non-numeric characters
+  
+      setUpdatedItem((prev) => {
+        let newEndingStock = prev.ENDINGSTOCK;
+  
+        if (name === "INDELIVERY") {
+          newEndingStock = prev.OPENINGSTOCK + (parseInt(numericValue) || 0) - prev.OUTSALE;
+        } else if (name === "OUTSALE") {
+          newEndingStock = prev.OPENINGSTOCK + prev.INDELIVERY - (parseInt(numericValue) || 0);
+        }
+  
+        return {
+          ...prev,
+          [name]: numericValue, // Keep as string while typing
+          ENDINGSTOCK: newEndingStock,
+        };
+      });
+    } else {
+      // Allow normal text input for other fields (CODE, CATEGORY, BRAND, PRODUCTNAME, etc.)
+      setUpdatedItem((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
   };
+  
+  
+  
 
 
   // 🔹 Enable Editing on DELETE Click
@@ -161,32 +272,31 @@ const Materials = () => {
 
   const handleDelete = async () => {
     if (!itemToDelete) return;
-
+  
     try {
       await deleteDoc(doc(db, "Inventory", itemToDelete.id));
       setMaterials(materials.filter((item) => item.id !== itemToDelete.id));
       setEditingItem(null);
       setDeleteModalOpen(false);
-
-      // ✅ Show success modal
-      setSuccessMessage("Item successfully deleted!");
-      setSuccessModalOpen(true);
-      // 🔹 Add a log entry
+  
+      // ✅ Log the delete action in a consistent format
       await addDoc(collection(db, "Logs"), {
         user: user?.User || "unknown",
-        action: `Deleted material ID=${itemToDelete.id}`,
+        action: `Deleted material ID=${itemToDelete.CODE}`,
         timestamp: serverTimestamp(),
         details: {
           code: itemToDelete.CODE,
           productName: itemToDelete.PRODUCTNAME,
         },
       });
+  
+      setSuccessMessage("Item successfully deleted!");
+      setSuccessModalOpen(true);
     } catch (error) {
       console.error("Error deleting item:", error);
       alert("Failed to delete item.");
     }
   };
-
   const tableHeaderStyle = {
     backgroundColor: "#3f5930",
     color: "white",
@@ -228,69 +338,95 @@ const Materials = () => {
   };
 
 
-  // 🔹 Save Edits to Firestore
   const saveEdit = async () => {
+    if (!editingItem) return;
+  
     try {
-      await updateDoc(doc(db, "Inventory", editingItem), updatedItem);
-      setMaterials(materials.map((item) => (item.id === editingItem ? { ...updatedItem, id: editingItem } : item)));
+      const itemRef = doc(db, "Inventory", editingItem);
+      
+      // ✅ Fetch the current data before updating
+      const existingItem = materials.find(item => item.id === editingItem);
+      
+      // ✅ Update Firestore
+      await updateDoc(itemRef, updatedItem);
+  
+      setMaterials(
+        materials.map((item) =>
+          item.id === editingItem ? { ...updatedItem, id: editingItem } : item
+        )
+      );
+  
       setEditingItem(null);
-
+  
+      
+      await addDoc(collection(db, "Logs"), {
+        user: user?.User || "unknown",
+        action: `Updated material CODE=${existingItem?.CODE || "N/A"}`,
+        timestamp: serverTimestamp(),
+        details: {
+          code: existingItem?.CODE || "N/A",
+          productName: existingItem?.PRODUCTNAME || "N/A",
+        },
+        changes: Object.keys(updatedItem).reduce((acc, key) => {
+          if (existingItem[key] !== updatedItem[key]) {
+            acc[key] = {
+              before: existingItem[key],
+              after: updatedItem[key],
+            };
+          }
+          return acc;
+        }, {}),
+      });
+  
       // ✅ Show success modal
       setSuccessMessage("Item successfully updated!");
       setSuccessModalOpen(true);
-      // 🔹 Add a log entry
-      await addDoc(collection(db, "Logs"), {
-        user: user?.User || "unknown",
-        action: `Updated material ID=${editingItem}`,
-        timestamp: serverTimestamp(),
-        oldData: {},      // if you want
-        newData: updatedItem,
-      });
     } catch (error) {
       console.error("Error updating item:", error);
       alert("Failed to update item.");
     }
   };
+  
+  
 
 
 
 
   const handleCreate = async (newMaterial) => {
     try {
-      const storage = getStorage(); // ✅ Initialize Firebase Storage
+      const storage = getStorage();
       let imageUrl = "";
-
+  
       if (newMaterial.IMAGE) {
         const imageRef = ref(storage, `materials/${newMaterial.IMAGE.name}`);
         await uploadBytes(imageRef, newMaterial.IMAGE);
         imageUrl = await getDownloadURL(imageRef);
       }
-
-      // Include IMAGE_URL in Firestore data
+  
       const materialWithImage = {
         ...newMaterial,
         IMAGE_URL: imageUrl,
       };
-
+  
       const inventoryCollection = collection(db, "Inventory");
       const docRef = await addDoc(inventoryCollection, materialWithImage);
-
+  
       setMaterials([...materials, { id: docRef.id, ...materialWithImage }]);
       setIsModalOpen(false);
-
-      // ✅ Show success modal
-      setSuccessMessage("Item successfully added to Inventory!");
-      setSuccessModalOpen(true);
-
+  
+      // ✅ Log the create action in a consistent format
       await addDoc(collection(db, "Logs"), {
         user: user?.User || "unknown",
-        action: `Created new material code=${newMaterial.CODE}`,
+        action: `Created new material ID=${docRef.id}`,
         timestamp: serverTimestamp(),
         details: {
+          code: newMaterial.CODE,
           productName: newMaterial.PRODUCTNAME,
-          brand: newMaterial.BRAND,
         },
       });
+  
+      setSuccessMessage("Item successfully added to Inventory!");
+      setSuccessModalOpen(true);
     } catch (error) {
       console.error("Error adding item:", error);
       alert("Error adding item to Firestore.");
@@ -363,6 +499,7 @@ const Materials = () => {
               Total Items: <strong>{totalItems}</strong>
             </Typography>
 
+
             <Box sx={{ display: "flex", gap: 2 }}>
               <Button variant="contained" color="primary" onClick={() => filterByBrand("BLM")}>
                 BilMagic ({brandCounts.BLM})
@@ -386,7 +523,7 @@ const Materials = () => {
               <TableHead>
                 <TableRow sx={{ backgroundColor: "#3f5930" }}>
                   {[
-                    "IMAGE",
+                    // "IMAGE",
                     "CODE",
                     "CATEGORY",
                     "BRAND",
@@ -442,7 +579,7 @@ const Materials = () => {
                   .slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage) // Apply pagination after filtering
                   .map((item) => (
                     <TableRow key={item.id}>
-                      <TableCell>
+                      {/* <TableCell>
                         {item.IMAGE_URL ? (
                           <img
                             src={item.IMAGE_URL}
@@ -452,7 +589,7 @@ const Materials = () => {
                         ) : (
                           "No Image"
                         )}
-                      </TableCell>
+                      </TableCell> */}
 
                       <TableCell>
                         {editingItem === item.id ? (
@@ -620,6 +757,62 @@ const Materials = () => {
               Next
             </Button>
           </Box>
+          <Box sx={{ marginBottom: 3 }}>
+            <Typography variant="h6">View Past Reports</Typography>
+            <Select
+  value={selectedMonth}
+  onChange={(e) => {
+    const [month, year] = e.target.value.split(" ");
+    setSelectedMonth(e.target.value);
+    fetchMonthlyReport(month, parseInt(year));
+  }}
+  sx={{ minWidth: 200, marginBottom: 2 }}
+>
+  {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+    .map((month) => (
+      <MenuItem key={`${month} ${new Date().getFullYear()}`} value={`${month} ${new Date().getFullYear()}`}>
+        {month} {new Date().getFullYear()}
+      </MenuItem>
+    ))}
+</Select>
+
+
+          </Box>
+          {monthlyReport.length > 0 && (
+  <Paper sx={{ padding: 2, marginTop: 3 }}>
+    <Typography variant="h6">Monthly Report for {selectedMonth}</Typography>
+    <TableContainer>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell><b>Code</b></TableCell>
+            <TableCell><b>Product Name</b></TableCell>
+            <TableCell><b>Price</b></TableCell>
+            <TableCell><b>Opening Stock</b></TableCell>
+            <TableCell><b>In Delivery</b></TableCell>
+            <TableCell><b>Out Sale</b></TableCell>
+            <TableCell><b>Ending Stock</b></TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {monthlyReport.map((item) => (
+            <TableRow key={item.id}>
+              <TableCell>{item.CODE}</TableCell>
+              <TableCell>{item.PRODUCTNAME}</TableCell>
+              <TableCell>{item.PRICE}</TableCell>
+              <TableCell>{item.OPENINGSTOCK}</TableCell>
+              <TableCell>{item.INDELIVERY}</TableCell>
+              <TableCell>{item.OUTSALE}</TableCell>
+              <TableCell>{item.ENDINGSTOCK}</TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  </Paper>
+)}
+
+
 
 
           <ConfirmDeleteMaterialModal
