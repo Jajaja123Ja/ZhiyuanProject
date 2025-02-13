@@ -36,44 +36,51 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const inventoryCollection = collection(db, "Inventory");
-      const snapshot = await getDocs(inventoryCollection);
-      const inventory = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        CATEGORY: doc.data().CATEGORY || "Uncategorized",
-        ENDINGSTOCK: Number(doc.data().ENDINGSTOCK) || 0,
-        OUTSALE: Number(doc.data().OUTSALE) || 0,
-        INDELIVERY: Number(doc.data().INDELIVERY) || 0,
-      }));
+        const inventoryCollection = collection(db, "Inventory");
+        const snapshot = await getDocs(inventoryCollection);
+        const inventory = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            CATEGORY: doc.data().CATEGORY || "Uncategorized",
+            ENDINGSTOCK: Number(doc.data().ENDINGSTOCK) || 0,
+            OUTSALE: Number(doc.data().OUTSALE) || 0,
+            INDELIVERY: Number(doc.data().INDELIVERY) || 0,
+            INRTS: Number(doc.data().INRTS) || 0,  // ✅ Fetch INRTS (Returns)
+        }));
 
-      console.log("Fetched Inventory Data:", inventory);
+        console.log("Fetched Inventory Data:", inventory);
 
-      const categoryData = {};
-      inventory.forEach((item) => {
-        if (!categoryData[item.CATEGORY]) {
-          categoryData[item.CATEGORY] = { stock: 0, sold: 0, restocked: 0 };
-        }
-        categoryData[item.CATEGORY].stock += item.ENDINGSTOCK;
-        categoryData[item.CATEGORY].sold += item.OUTSALE;
-        categoryData[item.CATEGORY].restocked += item.INDELIVERY;
-      });
+        const categoryData = {};
+        inventory.forEach((item) => {
+            if (!categoryData[item.CATEGORY]) {
+                categoryData[item.CATEGORY] = { stock: 0, sold: 0, restocked: 0, returns: 0 };  // ✅ Include `returns`
+            }
+            categoryData[item.CATEGORY].stock += item.ENDINGSTOCK;
+            categoryData[item.CATEGORY].sold += item.OUTSALE;
+            categoryData[item.CATEGORY].restocked += item.INDELIVERY;
+            categoryData[item.CATEGORY].returns += item.INRTS;  // ✅ Add INRTS (Returns)
+        });
+        
 
-      setCategoryReport(categoryData);
+        setCategoryReport(categoryData);
 
-      const totalItemsSold = inventory.reduce((sum, item) => sum + item.OUTSALE, 0);
-      setTotalStock(inventory.reduce((sum, item) => sum + item.ENDINGSTOCK, 0));
-      setItemsSold(totalItemsSold);
+        const totalItemsSold = inventory.reduce((sum, item) => sum + item.OUTSALE, 0);
+        const totalReturns = inventory.reduce((sum, item) => sum + item.INRTS, 0);  // ✅ Compute total returns
 
-      setStockData({
-        sold: totalItemsSold,
-        restocked: inventory.reduce((sum, item) => sum + item.INDELIVERY, 0),
-      });
+        setTotalStock(inventory.reduce((sum, item) => sum + item.ENDINGSTOCK, 0));
+        setItemsSold(totalItemsSold);
+        setReturnsCount(totalReturns);  // ✅ Update Returns Count
 
-      setLoading(false);
+        setStockData({
+            sold: totalItemsSold,
+            restocked: inventory.reduce((sum, item) => sum + item.INDELIVERY, 0),
+        });
+
+        setLoading(false);
     } catch (error) {
-      console.error("Error fetching dashboard data:", error);
+        console.error("Error fetching dashboard data:", error);
     }
-  };
+};
+
 
   const categoryEntries = Object.entries(categoryReport);
   const totalPages = Math.max(1, Math.ceil(categoryEntries.length / itemsPerPage));
@@ -126,32 +133,36 @@ const Dashboard = () => {
                 </Typography>
                 <TableContainer component={Paper} sx={{ mt: 2 }}>
                   <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell sx={{ fontWeight: "bold" }}>Category</TableCell>
-                        <TableCell sx={{ fontWeight: "bold" }}>Total Stock</TableCell>
-                        <TableCell sx={{ fontWeight: "bold" }}>Total Sold</TableCell>
-                        <TableCell sx={{ fontWeight: "bold" }}>Total Restocked</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {displayedCategories.length > 0 ? (
-                        displayedCategories.map(([category, data]) => (
-                          <TableRow key={category}>
-                            <TableCell>{category}</TableCell>
-                            <TableCell>{data.stock}</TableCell>
-                            <TableCell>{data.sold}</TableCell>
-                            <TableCell>{data.restocked}</TableCell>
-                          </TableRow>
-                        ))
-                      ) : (
-                        <TableRow>
-                          <TableCell colSpan={4} align="center">
-                            No category data available.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
+                  <TableHead>
+    <TableRow>
+        <TableCell sx={{ fontWeight: "bold" }}>Category</TableCell>
+        <TableCell sx={{ fontWeight: "bold" }}>Total Stock</TableCell>
+        <TableCell sx={{ fontWeight: "bold" }}>Total Sold</TableCell>
+        <TableCell sx={{ fontWeight: "bold" }}>Total Restocked</TableCell>
+        <TableCell sx={{ fontWeight: "bold" }}>Total Returns</TableCell> {/* ✅ Add this */}
+    </TableRow>
+</TableHead>
+
+<TableBody>
+    {displayedCategories.length > 0 ? (
+        displayedCategories.map(([category, data]) => (
+            <TableRow key={category}>
+                <TableCell>{category}</TableCell>
+                <TableCell>{data.stock}</TableCell>
+                <TableCell>{data.sold}</TableCell>
+                <TableCell>{data.restocked}</TableCell>
+                <TableCell>{data.returns}</TableCell> {/* ✅ Display per-category returns */}
+            </TableRow>
+        ))
+    ) : (
+        <TableRow>
+            <TableCell colSpan={5} align="center">
+                No category data available.
+            </TableCell>
+        </TableRow>
+    )}
+</TableBody>
+
                   </Table>
                 </TableContainer>
 
