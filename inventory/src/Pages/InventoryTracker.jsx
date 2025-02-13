@@ -29,9 +29,7 @@ import { useAuthContext } from "../hooks/useAuthContext";
 const categories = [
   "In (Delivery)",
   "In (RTS)",
-  "In (Yuan Repaired)",
   "Out (Sale)",
-  "Out (Yuan/Damaged)",
   "Out (Freebies)",
 ];
 
@@ -81,12 +79,12 @@ const InventoryTracker = () => {
 
 
   const tabDataMap = {
-    0: inDeliveryEntries,    // "In (Delivery)"
-    1: inReturnEntries,      // "In (RTS)" in your code, but stored in "InReturn"
-    2: entries,              // "In (Yuan Repaired)" – you may want to fetch from InYuanRepaired if you have it
-    3: outSaleEntries,       // "Out (Sale)"
-    4: entries,              // "Out (Yuan/Damaged)" – fetch from OutYuanDmg if you have it
-    5: entries,              // "Out (Freebies)" – fetch from OutFreebies if you have it
+    0: inDeliveryEntries,    
+    1: inReturnEntries,     
+    2: entries,             
+    3: outSaleEntries,       
+    4: entries,             
+    5: entries,              
   };
 
 
@@ -245,45 +243,66 @@ const InventoryTracker = () => {
       alert("Please fill in all fields.");
       return;
     }
-
+  
     const qty = parseInt(newEntry.qty, 10);
     if (isNaN(qty) || qty <= 0) {
       alert("Quantity must be a valid number greater than zero.");
       return;
     }
-
+  
     try {
       const inventoryRef = collection(db, "Inventory");
       const q = query(inventoryRef, where("CODE", "==", newEntry.code.trim()));
       const querySnapshot = await getDocs(q);
-
+  
       if (!querySnapshot.empty) {
         const productDoc = querySnapshot.docs[0];
         const productData = productDoc.data();
         const productName = productData.PRODUCTNAME || "Unknown Product";
-
+  
         let updatedStock = Number(productData.ENDINGSTOCK || 0);
         let updatedOutSale = Number(productData.OUTSALE || 0);
         let updatedInDelivery = Number(productData.INDELIVERY || 0);
-
+        let updatedInRTS = Number(productData.INRTS || 0);
+        let updatedOutFreebies = Number(productData.OUTFREEBIES || 0);
+  
         let collectionName = "";
+        
         if (categories[selectedTab] === "In (Delivery)") {
           updatedStock += qty;
           updatedInDelivery += qty;
           collectionName = "InDelivery";
-        } else if (categories[selectedTab] === "Out (Sale)") {
+        } 
+        
+        else if (categories[selectedTab] === "Out (Sale)") {
           updatedStock -= qty;
           updatedOutSale += qty;
           collectionName = "OutSale";
+  
           if (updatedStock < 0) {
             alert(`Not enough stock! Available: ${productData.ENDINGSTOCK}`);
             return;
           }
-        } else if (categories[selectedTab] === "In (RTS)") {
-          updatedStock += qty;
+        } 
+        
+        else if (categories[selectedTab] === "In (RTS)") {  
+          updatedStock += qty; // Add returned stock back to the total stock
+          updatedInRTS += qty; // Update the INRTS count in the database
           collectionName = "InReturn";
+        } 
+        
+        else if (categories[selectedTab] === "Out (Freebies)") {
+          updatedStock -= qty; // Deduct the given freebies
+          updatedOutFreebies += qty; // Update OUTFREEBIES count
+          collectionName = "OutFreebies";
+  
+          if (updatedStock < 0) {
+            alert(`Not enough stock! Available: ${productData.ENDINGSTOCK}`);
+            return;
+          }
         }
-
+  
+        // Update the collection (InDelivery, OutSale, InReturn, or OutFreebies)
         await addDoc(collection(db, collectionName), {
           CODE: newEntry.code.trim(),
           PRODUCT: productName,
@@ -292,14 +311,17 @@ const InventoryTracker = () => {
           CREATED_BY: user?.User || "unknown",
           CREATED_AT: serverTimestamp(),
         });
-
+  
+        // Update stock in Firestore
         await updateDoc(doc(db, "Inventory", productDoc.id), {
           ENDINGSTOCK: updatedStock,
           OUTSALE: updatedOutSale,
           INDELIVERY: updatedInDelivery,
+          INRTS: updatedInRTS,  // ✅ Update INRTS when "In (RTS)" is selected
+          OUTFREEBIES: updatedOutFreebies,  // ✅ Update OUTFREEBIES when "Out (Freebies)" is selected
         });
-
-
+  
+        // Log the action in "Logs"
         await addDoc(collection(db, "Logs"), {
           user: user?.User || "unknown",
           action: `Added new entry to ${collectionName} with code=${newEntry.code.trim()}`,
@@ -309,12 +331,12 @@ const InventoryTracker = () => {
             product: productName,
           },
         });
-
+  
         setEntries([
           ...entries,
           { id: Date.now(), date: newEntry.date, code: newEntry.code, product: productName, qty, category: categories[selectedTab] },
         ]);
-
+  
         setNewEntry({ date: "", code: "", qty: "" });
       } else {
         alert("Product code not found in inventory!");
@@ -324,6 +346,7 @@ const InventoryTracker = () => {
       alert("Failed to update stock. Please try again.");
     }
   };
+  
 
 
   const handleDeleteConfirm = (entry) => {

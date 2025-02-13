@@ -105,6 +105,8 @@ const Materials = () => {
                 let inDelivery = parseInt(data.INDELIVERY) || 0;
                 let outSale = parseInt(data.OUTSALE) || 0;
                 let price = parseFloat(data.PRICE) || 0;
+                let inRTS = parseInt(data.INRTS) || 0;  
+let outFreebies = parseInt(data.OUTFREEBIES) || 0;  
 
                 // ✅ Save monthly report and reset stock on first day of month
                 if (isFirstDayOfMonth) {
@@ -116,7 +118,9 @@ const Materials = () => {
                         PRICE: price,
                         OPENINGSTOCK: openingStock,
                         INDELIVERY: inDelivery,
+                        INRTS: inRTS,
                         OUTSALE: outSale,
+                        OUTFREEBIES: outFreebies,
                         ENDINGSTOCK: endingStock,
                         MONTH: lastMonthName,
                         YEAR: lastMonth.getFullYear(),
@@ -132,25 +136,27 @@ const Materials = () => {
                         OPENINGSTOCK: openingStock,
                         INDELIVERY: inDelivery,
                         OUTSALE: outSale,
-                        ENDINGSTOCK: openingStock, // Set ENDINGSTOCK same as OPENINGSTOCK initially
+                        ENDINGSTOCK: openingStock, 
                     });
                 }
 
                 return {
-                    id: docSnapshot.id,
-                    CODE: data.CODE || "",
-                    CATEGORY: data.CATEGORY || "",
-                    BRAND: data.BRAND || "",
-                    PRODUCTNAME: data.PRODUCTNAME || "",
-                    TIPSIZE: data.TIPSIZE || "",
-                    PRICE: price,
-                    OPENINGSTOCK: openingStock,
-                    INDELIVERY: inDelivery,
-                    OUTSALE: outSale,
-                    ENDINGSTOCK: endingStock,
-                    STATUS: data.STATUS || "OK",
-                    IMAGE_URL: data.IMAGE_URL || "",
-                };
+                  id: docSnapshot.id,
+                  CODE: data.CODE || "",
+                  CATEGORY: data.CATEGORY || "",
+                  BRAND: data.BRAND || "",
+                  PRODUCTNAME: data.PRODUCTNAME || "",
+                  TIPSIZE: data.TIPSIZE || "",
+                  PRICE: price,
+                  OPENINGSTOCK: openingStock,
+                  INDELIVERY: inDelivery,
+                  INRTS: inRTS,  // Add this
+                  OUTSALE: outSale,
+                  OUTFREEBIES: outFreebies,  // Add this
+                  ENDINGSTOCK: endingStock,
+                  STATUS: data.STATUS || "OK",
+                  IMAGE_URL: data.IMAGE_URL || "",
+              };
             }));
 
             // ✅ Set materials and total items
@@ -215,46 +221,83 @@ const Materials = () => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-  
+
     // Allow empty values to prevent auto-reset
     if (value === "") {
-      setUpdatedItem((prev) => ({
-        ...prev,
-        [name]: "",
-      }));
-      return;
+        setUpdatedItem((prev) => ({
+            ...prev,
+            [name]: "",
+        }));
+        return;
     }
-  
-    // Check if the field should only allow numbers
-    const numericFields = ["PRICE", "OPENINGSTOCK", "INDELIVERY", "OUTSALE", "ENDINGSTOCK"];
-    
+
+    // Fields that should only accept numbers
+    const numericFields = ["PRICE", "OPENINGSTOCK", "INDELIVERY", "INRTS", "OUTSALE", "OUTFREEBIES", "ENDINGSTOCK"];
+
     if (numericFields.includes(name)) {
-      // Ensure input is numeric only
-      const numericValue = value.replace(/[^0-9]/g, ""); // Remove non-numeric characters
-  
-      setUpdatedItem((prev) => {
-        let newEndingStock = prev.ENDINGSTOCK;
-  
-        if (name === "INDELIVERY") {
-          newEndingStock = prev.OPENINGSTOCK + (parseInt(numericValue) || 0) - prev.OUTSALE;
-        } else if (name === "OUTSALE") {
-          newEndingStock = prev.OPENINGSTOCK + prev.INDELIVERY - (parseInt(numericValue) || 0);
-        }
-  
-        return {
-          ...prev,
-          [name]: numericValue, // Keep as string while typing
-          ENDINGSTOCK: newEndingStock,
-        };
-      });
+        const numericValue = value.replace(/[^0-9]/g, ""); // Ensure numeric input only
+
+        setUpdatedItem((prev) => {
+            let newValue = parseInt(numericValue) || 0;
+            
+            // Previous values
+            let prevINDELIVERY = parseInt(prev.INDELIVERY) || 0;
+            let prevINRTS = parseInt(prev.INRTS) || 0;
+            let prevOUTSALE = parseInt(prev.OUTSALE) || 0;
+            let prevOUTFREEBIES = parseInt(prev.OUTFREEBIES) || 0;
+
+            // Calculate the base ending stock
+            let prevEndingStock =
+                (parseInt(prev.OPENINGSTOCK) || 0) +
+                (parseInt(prev.INDELIVERY) || 0) +
+                (parseInt(prev.INRTS) || 0) -
+                (parseInt(prev.OUTSALE) || 0) -
+                (parseInt(prev.OUTFREEBIES) || 0);
+
+            let newEndingStock = prevEndingStock;
+
+            // Adjust ENDINGSTOCK when INDELIVERY changes (New deliveries add to stock)
+            if (name === "INDELIVERY") {
+                let diff = newValue - prevINDELIVERY;
+                newEndingStock += diff;
+            }
+
+            // Adjust ENDINGSTOCK when INRTS changes (Returns increase stock)
+            if (name === "INRTS") {
+                let diff = newValue - prevINRTS;
+                newEndingStock += diff;
+            }
+
+            // Adjust ENDINGSTOCK when OUTSALE changes (Sales decrease stock)
+            if (name === "OUTSALE") {
+                let diff = newValue - prevOUTSALE;
+                newEndingStock -= diff;
+            }
+
+            // Adjust ENDINGSTOCK when OUTFREEBIES changes (Freebies decrease stock)
+            if (name === "OUTFREEBIES") {
+                let diff = newValue - prevOUTFREEBIES;
+                newEndingStock -= diff;
+            }
+
+            return {
+                ...prev,
+                [name]: numericValue,
+                ENDINGSTOCK: newEndingStock, // ✅ Fully dynamic stock calculation
+            };
+        });
     } else {
-      // Allow normal text input for other fields (CODE, CATEGORY, BRAND, PRODUCTNAME, etc.)
-      setUpdatedItem((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
+        // Allow normal text input for other fields (CODE, CATEGORY, BRAND, PRODUCTNAME, etc.)
+        setUpdatedItem((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
     }
-  };
+};
+
+
+
+
   
   
   
@@ -532,7 +575,9 @@ const Materials = () => {
                     "PRICE",
                     "OPENINGSTOCK",
                     "INDELIVERY",
+                    "IN(RTS)",
                     "OUTSALE",
+                    "OUT(FREEBIES)",
                     "ENDINGSTOCK",
                     "STATUS",
                   ].map((key) => (
@@ -563,7 +608,7 @@ const Materials = () => {
               <TableBody>
                 {materials
                   .filter((item) => {
-                    const term = debouncedSearch; // Use debounced value for better performance
+                    const term = debouncedSearch; 
 
                     const matchesSearch =
                       term === "" ||
@@ -576,7 +621,7 @@ const Materials = () => {
 
                     return matchesSearch && matchesBrand;
                   })
-                  .slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage) // Apply pagination after filtering
+                  .slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage) 
                   .map((item) => (
                     <TableRow key={item.id}>
                       {/* <TableCell>
@@ -649,9 +694,23 @@ const Materials = () => {
                       </TableCell>
                       <TableCell>
                         {editingItem === item.id ? (
+                          <TextField name="INRTS" value={updatedItem.INRTS} onChange={handleInputChange} />
+                        ) : (
+                          item.INRTS
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingItem === item.id ? (
                           <TextField name="OUTSALE" value={updatedItem.OUTSALE} onChange={handleInputChange} />
                         ) : (
                           item.OUTSALE
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {editingItem === item.id ? (
+                          <TextField name="OUTFREEBIES" value={updatedItem.OUTFREEBIES} onChange={handleInputChange} />
+                        ) : (
+                          item.OUTFREEBIES
                         )}
                       </TableCell>
                       <TableCell>
