@@ -86,7 +86,7 @@ const ActivityLogs = () => {
       );
     }
   
-    // ✅ Real-time listener
+    // ✅ Real-time listener for Logs (Includes Excel Imports)
     const unsubscribe = onSnapshot(logsQuery, (snapshot) => {
       const logsData = snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -108,25 +108,26 @@ const ActivityLogs = () => {
           },
         }));
   
-        // ✅ Merge and sort logs in real-time
+        // ✅ Merge logs (Firestore Logs + Borrowed Logs)
         setLogs(
           [...logsData, ...borrowedData].sort((a, b) => 
             new Date(b.timestamp?.toDate ? b.timestamp.toDate() : b.timestamp) - 
             new Date(a.timestamp?.toDate ? a.timestamp.toDate() : a.timestamp)
           )
         );
-        
+  
       });
   
-      return () => borrowedUnsub(); // Unsubscribe when component unmounts
+      return () => borrowedUnsub(); 
     });
   
-    return () => unsubscribe(); // Unsubscribe when component unmounts
+    return () => unsubscribe(); 
   };
   
   
+  
 
-  /** 🔹 Format Firestore Timestamp to Readable Date */
+ 
   const formatDate = (timestamp) => {
     if (timestamp?.toDate) {
       return timestamp.toDate().toLocaleString();
@@ -203,13 +204,34 @@ const ActivityLogs = () => {
       ) : log.action === "Returned Item" ? (
         <>
           <Typography variant="body2">
-            <strong>Returned By:</strong> {log.user || "Unknown"} {/* ✅ Show user */}
+            <strong>Returned By:</strong> {log.user || "Unknown"}
           </Typography>
           <Typography variant="body2">
             <strong>Item:</strong> {log.details.itemName || "N/A"}
           </Typography>
           <Typography variant="body2">
             <strong>Quantity:</strong> {log.details.quantity || "N/A"}
+          </Typography>
+        </>
+      ) : log.action.includes("Excel import") ? (
+        <>
+          <Typography variant="body2">
+            <strong>Imported from Excel:</strong> {log.details.CODE || "N/A"}
+          </Typography>
+          <Typography variant="body2">
+            <strong>Quantity:</strong> {log.details.Quantity || "N/A"}
+          </Typography>
+          <Typography variant="body2">
+            <strong>Previous Stock:</strong> {log.details.PreviousStock || 0}
+          </Typography>
+          <Typography variant="body2">
+            <strong>New Stock:</strong> {log.details.NewStock || 0}
+          </Typography>
+          <Typography variant="body2">
+            <strong>Previous OutSale:</strong> {log.details.PreviousOutSale || 0}
+          </Typography>
+          <Typography variant="body2">
+            <strong>New OutSale:</strong> {log.details.NewOutSale || 0}
           </Typography>
         </>
       ) : (

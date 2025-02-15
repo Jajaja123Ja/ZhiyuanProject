@@ -1,5 +1,5 @@
 import { db } from "../firebase"; // Ensure correct Firebase config path
-import { collection, query, where, getDocs, updateDoc, doc, addDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
+import { collection, query, where, getDocs, updateDoc, doc, addDoc, serverTimestamp, onSnapshot, writeBatch } from "firebase/firestore";
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -25,7 +25,7 @@ import {
 import Navbar from "../Components/Navbar";
 import Sidebar from "../Components/Sidebar";
 import { useAuthContext } from "../hooks/useAuthContext";
-
+import * as XLSX from "xlsx";
 const categories = [
   "In (Delivery)",
   "In (RTS)",
@@ -85,12 +85,12 @@ const InventoryTracker = () => {
     2: [...outSaleEntries].sort((a, b) => new Date(b.CREATED_AT) - new Date(a.CREATED_AT)),  // ✅ Ensure sorting
     3: [...outFreebiesEntries].sort((a, b) => new Date(b.CREATED_AT) - new Date(a.CREATED_AT)),
   };
-  
+
 
   useEffect(() => {
     const fetchCollections = () => {
       const collections = ["OutSale", "InDelivery", "InReturn", "OutFreebies"];
-      
+
       const unsubscribes = collections.map((collectionName) => {
         const ref = collection(db, collectionName);
         return onSnapshot(ref, (snapshot) => {
@@ -117,7 +117,7 @@ const InventoryTracker = () => {
               setOutFreebiesEntries(data);
               break;
             default:
-              console.warn("Unknown collection:", collectionName); 
+              console.warn("Unknown collection:", collectionName);
           }
         });
       });
@@ -222,7 +222,7 @@ const InventoryTracker = () => {
     setSelectedTab(newValue);
     setCurrentPage(1);  // ✅ Reset to first page when changing tabs
   };
-  
+
   const handleInputChange = (e) => {
     setNewEntry({ ...newEntry, [e.target.name]: e.target.value });
   };
@@ -232,65 +232,65 @@ const InventoryTracker = () => {
       alert("Please fill in all fields.");
       return;
     }
-  
+
     const qty = parseInt(newEntry.qty, 10);
     if (isNaN(qty) || qty <= 0) {
       alert("Quantity must be a valid number greater than zero.");
       return;
     }
-  
+
     try {
       const inventoryRef = collection(db, "Inventory");
       const q = query(inventoryRef, where("CODE", "==", newEntry.code.trim()));
       const querySnapshot = await getDocs(q);
-  
+
       if (!querySnapshot.empty) {
         const productDoc = querySnapshot.docs[0];
         const productData = productDoc.data();
         const productName = productData.PRODUCTNAME || "Unknown Product";
-  
+
         let updatedStock = Number(productData.ENDINGSTOCK || 0);
         let updatedOutSale = Number(productData.OUTSALE || 0);
         let updatedInDelivery = Number(productData.INDELIVERY || 0);
         let updatedInRTS = Number(productData.INRTS || 0);
         let updatedOutFreebies = Number(productData.OUTFREEBIES || 0);
-  
+
         let collectionName = "";
-        
+
         if (categories[selectedTab] === "In (Delivery)") {
           updatedStock += qty;
           updatedInDelivery += qty;
           collectionName = "InDelivery";
-        } 
-        
+        }
+
         else if (categories[selectedTab] === "Out (Sale)") {
           updatedStock -= qty;
           updatedOutSale += qty;
           collectionName = "OutSale";
-  
-          if (updatedStock < 0) {
-            alert(`Not enough stock! Available: ${productData.ENDINGSTOCK}`);
-            return;
-          }
-        } 
-        
-        else if (categories[selectedTab] === "In (RTS)") {  
-          updatedStock += qty; // Add returned stock back to the total stock
-          updatedInRTS += qty; // Update the INRTS count in the database
-          collectionName = "InReturn";
-        } 
-        
-        else if (categories[selectedTab] === "Out (Freebies)") {
-          updatedStock -= qty; // Deduct the given freebies
-          updatedOutFreebies += qty; // Update OUTFREEBIES count
-          collectionName = "OutFreebies";
-  
+
           if (updatedStock < 0) {
             alert(`Not enough stock! Available: ${productData.ENDINGSTOCK}`);
             return;
           }
         }
-  
+
+        else if (categories[selectedTab] === "In (RTS)") {
+          updatedStock += qty; // Add returned stock back to the total stock
+          updatedInRTS += qty; // Update the INRTS count in the database
+          collectionName = "InReturn";
+        }
+
+        else if (categories[selectedTab] === "Out (Freebies)") {
+          updatedStock -= qty; // Deduct the given freebies
+          updatedOutFreebies += qty; // Update OUTFREEBIES count
+          collectionName = "OutFreebies";
+
+          if (updatedStock < 0) {
+            alert(`Not enough stock! Available: ${productData.ENDINGSTOCK}`);
+            return;
+          }
+        }
+
         // Update the collection (InDelivery, OutSale, InReturn, or OutFreebies)
         await addDoc(collection(db, collectionName), {
           CODE: newEntry.code.trim(),
@@ -300,7 +300,7 @@ const InventoryTracker = () => {
           CREATED_BY: user?.User || "unknown",
           CREATED_AT: serverTimestamp(),
         });
-  
+
         // Update stock in Firestore
         await updateDoc(doc(db, "Inventory", productDoc.id), {
           ENDINGSTOCK: updatedStock,
@@ -309,7 +309,7 @@ const InventoryTracker = () => {
           INRTS: updatedInRTS,  // ✅ Update INRTS when "In (RTS)" is selected
           OUTFREEBIES: updatedOutFreebies,  // ✅ Update OUTFREEBIES when "Out (Freebies)" is selected
         });
-  
+
         // Log the action in "Logs"
         await addDoc(collection(db, "Logs"), {
           user: user?.User || "unknown",
@@ -320,12 +320,12 @@ const InventoryTracker = () => {
             product: productName,
           },
         });
-  
+
         setEntries([
           ...entries,
           { id: Date.now(), date: newEntry.date, code: newEntry.code, product: productName, qty, category: categories[selectedTab] },
         ]);
-  
+
         setNewEntry({ date: "", code: "", qty: "" });
       } else {
         alert("Product code not found in inventory!");
@@ -335,7 +335,7 @@ const InventoryTracker = () => {
       alert("Failed to update stock. Please try again.");
     }
   };
-  
+
 
 
   const handleDeleteConfirm = (entry) => {
@@ -382,6 +382,150 @@ const InventoryTracker = () => {
     }
   };
 
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+  
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const excelData = XLSX.utils.sheet_to_json(sheet);
+  
+      try {
+        const batch = writeBatch(db); // ✅ Create a batch for faster updates
+        const logBatch = writeBatch(db); // ✅ Separate batch for logs
+  
+        const inventoryRef = collection(db, "Inventory");
+        const querySnapshot = await getDocs(inventoryRef);
+  
+        for (const row of excelData) {
+          const code = row["CODE"]?.trim();
+          const qty = parseInt(row["Quantity"], 10);
+  
+          if (!code || isNaN(qty)) continue;
+  
+          const productDoc = querySnapshot.docs.find((doc) => doc.data().CODE === code);
+  
+          if (productDoc) {
+            const productData = productDoc.data();
+            const updatedStock = Math.max((productData.ENDINGSTOCK || 0) - qty, 0);
+            const updatedOutSale = (productData.OUTSALE || 0) + qty;
+  
+            const productRef = doc(db, "Inventory", productDoc.id);
+  
+            // ✅ Use batch instead of multiple `await` updateDoc
+            batch.update(productRef, {
+              ENDINGSTOCK: updatedStock,
+              OUTSALE: updatedOutSale,
+            });
+  
+            // ✅ Log the update in Firestore "Logs" collection
+            const logRef = doc(collection(db, "Logs"));
+            logBatch.set(logRef, {
+              user: user?.User || "unknown",
+              action: `Updated stock via Excel import - Code: ${code}`,
+              timestamp: serverTimestamp(),
+              details: {
+                CODE: code,
+                Quantity: qty,
+                PreviousStock: productData.ENDINGSTOCK || 0,
+                NewStock: updatedStock,
+                PreviousOutSale: productData.OUTSALE || 0,
+                NewOutSale: updatedOutSale,
+              },
+            });
+          }
+        }
+  
+        // ✅ Commit all updates at once for better performance
+        await batch.commit();
+        await logBatch.commit();
+  
+        alert("Stock updated successfully from Excel file!");
+      } catch (error) {
+        console.error("Error updating stock:", error);
+        alert("Failed to update stock. Please try again.");
+      }
+    };
+  
+    reader.readAsArrayBuffer(file);
+  };
+
+  const handleFileUploadInDelivery = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+  
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: "array" });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const excelData = XLSX.utils.sheet_to_json(sheet);
+  
+      try {
+        const batch = writeBatch(db); // ✅ Use batch for better performance
+        const logBatch = writeBatch(db); // ✅ Separate batch for logs
+  
+        const inventoryRef = collection(db, "Inventory");
+        const querySnapshot = await getDocs(inventoryRef);
+  
+        for (const row of excelData) {
+          const code = row["CODE"]?.trim();
+          const qty = parseInt(row["Quantity"], 10);
+  
+          if (!code || isNaN(qty)) continue;
+  
+          const productDoc = querySnapshot.docs.find((doc) => doc.data().CODE === code);
+  
+          if (productDoc) {
+            const productData = productDoc.data();
+            const updatedStock = (productData.ENDINGSTOCK || 0) + qty; // ✅ Increase stock
+            const updatedInDelivery = (productData.INDELIVERY || 0) + qty; // ✅ Add to INDELIVERY
+  
+            const productRef = doc(db, "Inventory", productDoc.id);
+  
+            // ✅ Use batch to update inventory
+            batch.update(productRef, {
+              ENDINGSTOCK: updatedStock,
+              INDELIVERY: updatedInDelivery, // ✅ Ensure INDELIVERY is updated
+            });
+  
+            // ✅ Log the update in Firestore "Logs" collection
+            const logRef = doc(collection(db, "Logs"));
+            logBatch.set(logRef, {
+              user: user?.User || "unknown",
+              action: `Imported In (Delivery) stock via Excel - Code: ${code}`,
+              timestamp: serverTimestamp(),
+              details: {
+                CODE: code,
+                Quantity: qty,
+                PreviousStock: productData.ENDINGSTOCK || 0,
+                NewStock: updatedStock,
+                PreviousInDelivery: productData.INDELIVERY || 0,
+                NewInDelivery: updatedInDelivery,
+              },
+            });
+          }
+        }
+  
+        // ✅ Commit all updates at once
+        await batch.commit();
+        await logBatch.commit();
+  
+        alert("Stock updated successfully from Excel file (In Delivery)!");
+      } catch (error) {
+        console.error("Error updating stock:", error);
+        alert("Failed to update stock. Please try again.");
+      }
+    };
+  
+    reader.readAsArrayBuffer(file);
+  };
+  
 
   const displayedEntries = tabDataMap[selectedTab] || [];
   const totalPages = Math.ceil(displayedEntries.length / itemsPerPage);
@@ -421,7 +565,28 @@ const InventoryTracker = () => {
               </Button>
             </Box>
           </Paper>
+          {/* Show "Import In (Delivery)" button only on the "In (Delivery)" tab */}
+{selectedTab === 0 && (
+  <Button
+    variant="contained"
+    component="label"
+    sx={{ bgcolor: "#3f5930", color: "white", mb: 2 }}
+  >
+    Import In (Delivery)
+    <input type="file" hidden onChange={handleFileUploadInDelivery} />
+  </Button>
+)}
 
+{selectedTab === 2 && (
+  <Button
+    variant="contained"
+    component="label"
+    sx={{ bgcolor: "#3f5930", color: "white", mb: 2 }}
+  >
+    Import Excel
+    <input type="file" hidden onChange={handleFileUpload} />
+  </Button>
+)}
           {/* Data Table */}
           <TableContainer component={Paper} sx={{ mt: 2 }}>
             <Table>
@@ -485,7 +650,7 @@ const InventoryTracker = () => {
                   </TableRow>
                 ))}
               </TableBody>
-              {/* Pagination Controls */}
+
               <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", mt: 2 }}>
                 <Button
                   variant="contained"
@@ -525,7 +690,6 @@ const InventoryTracker = () => {
         </Box>
       </Box>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={openDeleteDialog} onClose={() => setOpenDeleteDialog(false)}>
         <DialogTitle>Confirm Delete</DialogTitle>
         <DialogContent>
