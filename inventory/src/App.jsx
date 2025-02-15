@@ -14,13 +14,14 @@ import ManageAccounts from './Pages/ManageAccounts';
 import ActivityLogs from './Pages/ActivityLogs';
 import ExcelUploader from './Components/ExcelUploader';
 import CheckInOut from './Pages/CheckInOut';
+import ItemsToPromote from './Pages/ItemsToPromote';
 
 function App() {
   return (
     <>
       <CssBaseline />
       <Routes>
-        {/* Public Routes */}
+        
         <Route path="/" element={<Homepage />} />
         <Route path="/login" element={<Login />} />
 
@@ -44,17 +45,17 @@ function App() {
          <Route
           path="/Accounts"
           element={
-            
+            <ProtectedRoute allowedRoles={['SUPERADMIN']}>
               <ManageAccounts />
-            
+              </ProtectedRoute>
           }
         />
         <Route
           path="/Checkinout"
           element={
-            
+            <ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}>
               <CheckInOut />
-            
+              </ProtectedRoute>
           }
         />
         <Route
@@ -68,9 +69,9 @@ function App() {
         <Route
           path="/Logs"
           element={
-            
+            <ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}>
               <ActivityLogs />
-            
+              </ProtectedRoute>
           }
         />
         <Route
@@ -94,6 +95,14 @@ function App() {
           element={
             <ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}>
               <Materials />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/Itemstopromote"
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN', 'SUPERADMIN']}>
+              <ItemsToPromote />
             </ProtectedRoute>
           }
         />

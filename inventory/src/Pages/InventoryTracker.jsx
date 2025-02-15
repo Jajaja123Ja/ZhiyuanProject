@@ -1,5 +1,5 @@
 import { db } from "../firebase"; // Ensure correct Firebase config path
-import { collection, query, where, getDocs, updateDoc, doc, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, getDocs, updateDoc, doc, addDoc, serverTimestamp, onSnapshot } from "firebase/firestore";
 import React, { useState, useEffect } from "react";
 import {
   Box,
@@ -20,7 +20,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  MenuItem
+  MenuItem,
 } from "@mui/material";
 import Navbar from "../Components/Navbar";
 import Sidebar from "../Components/Sidebar";
@@ -65,6 +65,7 @@ const InventoryTracker = () => {
   const [outSaleEntries, setOutSaleEntries] = useState([]);
   const [inDeliveryEntries, setInDeliveryEntries] = useState([]);
   const [inReturnEntries, setInReturnEntries] = useState([]);
+  const [outFreebiesEntries, setOutFreebiesEntries] = useState([]);
   // Right after your other state variables:
   const [editingItem, setEditingItem] = useState(null);   // holds doc ID
   const [updatedItem, setUpdatedItem] = useState({});     // holds fields being edited
@@ -79,65 +80,52 @@ const InventoryTracker = () => {
 
 
   const tabDataMap = {
-    0: inDeliveryEntries,    
-    1: inReturnEntries,     
-    2: entries,             
-    3: outSaleEntries,       
-    4: entries,             
-    5: entries,              
+    0: [...inDeliveryEntries].sort((a, b) => new Date(b.CREATED_AT) - new Date(a.CREATED_AT)),
+    1: [...inReturnEntries].sort((a, b) => new Date(b.CREATED_AT) - new Date(a.CREATED_AT)),
+    2: [...outSaleEntries].sort((a, b) => new Date(b.CREATED_AT) - new Date(a.CREATED_AT)),  // ✅ Ensure sorting
+    3: [...outFreebiesEntries].sort((a, b) => new Date(b.CREATED_AT) - new Date(a.CREATED_AT)),
   };
-
+  
 
   useEffect(() => {
-    const fetchCollections = async () => {
-      try {
-        // 1) OutSale
-        {
-          const outSaleRef = collection(db, "OutSale");
-          const snapshot = await getDocs(outSaleRef);
-          const outSaleData = snapshot.docs.map((doc) => ({
+    const fetchCollections = () => {
+      const collections = ["OutSale", "InDelivery", "InReturn", "OutFreebies"];
+      
+      const unsubscribes = collections.map((collectionName) => {
+        const ref = collection(db, collectionName);
+        return onSnapshot(ref, (snapshot) => {
+          const data = snapshot.docs.map((doc) => ({
             id: doc.id,
             CODE: doc.data().CODE,
             PRODUCT: doc.data().PRODUCT,
             QTY: doc.data().QTY,
             DATE: doc.data().DATE || "",
           }));
-          setOutSaleEntries(outSaleData);
-        }
 
-        // 2) InDelivery
-        {
-          const inDeliveryRef = collection(db, "InDelivery");
-          const snapshot = await getDocs(inDeliveryRef);
-          const inDeliveryData = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            CODE: doc.data().CODE,
-            PRODUCT: doc.data().PRODUCT,
-            QTY: doc.data().QTY,
-            DATE: doc.data().DATE || "", // Include date
-          }));
-          setInDeliveryEntries(inDeliveryData);
-        }
+          // Dynamically update the corresponding state
+          switch (collectionName) {
+            case "OutSale":
+              setOutSaleEntries(data);
+              break;
+            case "InDelivery":
+              setInDeliveryEntries(data);
+              break;
+            case "InReturn":
+              setInReturnEntries(data);
+              break;
+            case "OutFreebies":
+              setOutFreebiesEntries(data);
+              break;
+            default:
+              console.warn("Unknown collection:", collectionName); 
+          }
+        });
+      });
 
-        // 3) InReturn
-        {
-          const inReturnRef = collection(db, "InReturn");
-          const snapshot = await getDocs(inReturnRef);
-          const inReturnData = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            CODE: doc.data().CODE,
-            PRODUCT: doc.data().PRODUCT,
-            QTY: doc.data().QTY,
-            DATE: doc.data().DATE || "",
-          }));
-          setInReturnEntries(inReturnData);
-        }
-
-        // ... Repeat for other collections you have (InYuanRepaired, OutFreebies, OutYuanDmg, etc.)
-
-      } catch (error) {
-        console.error("Error fetching data:", error);
-      }
+      return () => {
+        // Cleanup listeners
+        unsubscribes.forEach((unsub) => unsub());
+      };
     };
 
     fetchCollections();
@@ -232,8 +220,9 @@ const InventoryTracker = () => {
 
   const handleTabChange = (_, newValue) => {
     setSelectedTab(newValue);
+    setCurrentPage(1);  // ✅ Reset to first page when changing tabs
   };
-
+  
   const handleInputChange = (e) => {
     setNewEntry({ ...newEntry, [e.target.name]: e.target.value });
   };

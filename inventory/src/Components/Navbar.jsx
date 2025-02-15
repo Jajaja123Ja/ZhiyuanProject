@@ -30,9 +30,9 @@ const Navbar = ({ isHovered }) => {
         padding: "0.5rem 1rem",
       }}
     >
-      <Toolbar sx={{ display: "flex", alignItems: "center" }}>
-        {/* Left Section */}
-        <Box sx={{ flex: 1 }}>
+      <Toolbar sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        {/* Left Section: Logo and Company Name */}
+        <Box>
           <Typography
             variant="h6"
             component="div"
@@ -59,15 +59,13 @@ const Navbar = ({ isHovered }) => {
           </Typography>
         </Box>
 
-        {/* Right Section: Show Logout button if user is logged in */}
+        {/* Right Section: Welcome Message & Logout Button */}
         {user && (
-          <Box>
-            <Button
-              variant="contained"
-              color="error"
-              onClick={handleLogout}
-              sx={{ ml: 2 }}
-            >
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <Typography variant="body1" sx={{ fontWeight: "bold", color: "#3f5930" }}>
+              Hello, Welcome {user.User}!
+            </Typography>
+            <Button variant="contained" color="error" onClick={handleLogout}>
               Logout
             </Button>
           </Box>

@@ -140,7 +140,7 @@ const ActivityLogs = () => {
       <Box sx={{ display: "flex", marginTop: "64px" }}>
         <Sidebar isHovered={isHovered} setIsHovered={setIsHovered} />
         <Box sx={{ flexGrow: 1, padding: 3 }}>
-          <Typography variant="h4" sx={{ mb: 2, fontWeight: "bold" }}>
+          <Typography variant="h4" sx={{ mb: 2, fontWeight: "bold", color: "#96720b" }}>
             Activity Logs
           </Typography>
 

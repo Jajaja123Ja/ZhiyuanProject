@@ -10,10 +10,11 @@ import {
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import ReportIcon from "@mui/icons-material/Assessment";
-import TrackChangesIcon from "@mui/icons-material/TrackChanges";
+import TrackChangesIcon from "@mui/icons-material/TrackChanges"; // ✅ Used for "Items to Promote"
 import PeopleIcon from "@mui/icons-material/People";
 import RestoreIcon from "@mui/icons-material/Restore";
 import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp"; // ✅ New icon for "Items to Promote"
 import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "../hooks/useAuthContext";
 
@@ -72,7 +73,7 @@ const Sidebar = ({ isHovered, setIsHovered }) => {
               </ListItem>
 
               {/* Manage Accounts: only for ADMIN or SUPERADMIN */}
-              {(user?.Perms === "ADMIN" || user?.Perms === "SUPERADMIN") && (
+              {(user?.Perms === "SUPERADMIN") && (
                 <ListItem button onClick={() => navigate("/Accounts")} sx={{ cursor: "pointer" }}>
                   <ListItemIcon>
                     <PeopleIcon />
@@ -100,11 +101,20 @@ const Sidebar = ({ isHovered, setIsHovered }) => {
             </ListItemIcon>
             {isHovered && <ListItemText primary="Stock IN and OUT" />}
           </ListItem>
+
           <ListItem button onClick={() => navigate("/Checkinout")} sx={{ cursor: "pointer" }}>
             <ListItemIcon>
-              <CompareArrowsIcon /> {/* 🔄 Ideal for Check IN/OUT */}
+              <CompareArrowsIcon />
             </ListItemIcon>
             {isHovered && <ListItemText primary="Check IN and OUT" />}
+          </ListItem>
+
+          {/* ✅ New "Items to Promote" section */}
+          <ListItem button onClick={() => navigate("/Itemstopromote")} sx={{ cursor: "pointer" }}>
+            <ListItemIcon>
+              <TrendingUpIcon /> {/* 🔼 Trending icon for Promotions */}
+            </ListItemIcon>
+            {isHovered && <ListItemText primary="Items to Promote" />}
           </ListItem>
         </List>
       </Box>
@@ -113,4 +123,3 @@ const Sidebar = ({ isHovered, setIsHovered }) => {
 };
 
 export default Sidebar;
- 

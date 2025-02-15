@@ -489,7 +489,7 @@ let outFreebies = parseInt(data.OUTFREEBIES) || 0;
             padding: 3,
             marginLeft: isHovered ? "10px" : "10px",
             transition: "margin-left 0.3s ease-in-out",
-            width: `calc(100% - ${isHovered ? "10px" : "10px"})`,
+            width: `calc(100% - ${isHovered ? "21px" : "10px"})`,
           }}
         >
           <Typography
