@@ -7,6 +7,7 @@ import {
   orderBy,
   query,
   where,
+  onSnapshot
 } from "firebase/firestore";
 import { db } from "../firebase";
 import {
@@ -68,34 +69,62 @@ const ActivityLogs = () => {
   };
 
   /** 🔹 Fetch Logs Based on Selected Month */
-  const fetchLogs = async () => {
-    try {
-      const logsRef = collection(db, "Logs");
-      let logsQuery = query(logsRef, orderBy("timestamp", "desc"));
-
-      if (selectedMonth) {
-        const [year, month] = selectedMonth.split("-");
-        const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
-        const endDate = new Date(Date.UTC(year, month, 1, 0, 0, 0));
-
-        logsQuery = query(
-          logsRef,
-          where("timestamp", ">=", startDate),
-          where("timestamp", "<", endDate),
-          orderBy("timestamp", "desc")
-        );
-      }
-
-      const snapshot = await getDocs(logsQuery);
+  const fetchLogs = () => {
+    const logsRef = collection(db, "Logs");
+    let logsQuery = query(logsRef, orderBy("timestamp", "desc"));
+  
+    if (selectedMonth) {
+      const [year, month] = selectedMonth.split("-");
+      const startDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
+      const endDate = new Date(Date.UTC(year, month, 1, 0, 0, 0));
+  
+      logsQuery = query(
+        logsRef,
+        where("timestamp", ">=", startDate),
+        where("timestamp", "<", endDate),
+        orderBy("timestamp", "desc")
+      );
+    }
+  
+    // ✅ Real-time listener
+    const unsubscribe = onSnapshot(logsQuery, (snapshot) => {
       const logsData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
-      setLogs(logsData);
-    } catch (error) {
-      console.error("Error fetching logs:", error);
-    }
+  
+      // ✅ Fetch Borrowed & Returned Items separately in real-time
+      const borrowedRef = collection(db, "borrowedItems");
+      const borrowedUnsub = onSnapshot(borrowedRef, (borrowedSnapshot) => {
+        const borrowedData = borrowedSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          action: doc.data().status === "IN" ? "Returned Item" : "Borrowed Item",
+          timestamp: doc.data().status === "IN" ? doc.data().returnedAt : doc.data().borrowedAt,
+          user: doc.data().returnedBy || doc.data().borrowedBy || "Unknown",
+          details: {
+            borrower: doc.data().borrower,
+            itemName: doc.data().itemName,
+            quantity: doc.data().quantity,
+          },
+        }));
+  
+        // ✅ Merge and sort logs in real-time
+        setLogs(
+          [...logsData, ...borrowedData].sort((a, b) => 
+            new Date(b.timestamp?.toDate ? b.timestamp.toDate() : b.timestamp) - 
+            new Date(a.timestamp?.toDate ? a.timestamp.toDate() : a.timestamp)
+          )
+        );
+        
+      });
+  
+      return () => borrowedUnsub(); // Unsubscribe when component unmounts
+    });
+  
+    return () => unsubscribe(); // Unsubscribe when component unmounts
   };
+  
+  
 
   /** 🔹 Format Firestore Timestamp to Readable Date */
   const formatDate = (timestamp) => {
@@ -151,45 +180,75 @@ const ActivityLogs = () => {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {logs.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage).map(log => (
-                  <TableRow key={log.id}>
-                    <TableCell>{log.user}</TableCell>
-                    <TableCell>{log.action}</TableCell>
-                    <TableCell>{formatDate(log.timestamp)}</TableCell>
-                    <TableCell>
-                      {log.details ? (
-                        <Box>
-                          <Typography variant="body2">
-                            <strong>Product:</strong> {log.details.product || "N/A"}
-                          </Typography>
-                          <Typography variant="body2">
-                            <strong>Quantity:</strong> {log.details.qty || "N/A"}
-                          </Typography>
-                        </Box>
-                      ) : "N/A"}
-                    </TableCell>
-                    <TableCell>
-                      {log.changes && Object.keys(log.changes).length > 0 ? (
-                        <Box sx={{ maxWidth: "250px", overflow: "auto", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                          <Typography variant="body2" fontWeight="bold">Changes:</Typography>
-                          {Object.entries(log.changes).map(([field, values]) => (
-                            <Typography key={field} variant="body2" sx={{ fontSize: "12px", color: "gray" }}>
-                              <strong>{field}:</strong>{" "}
-                              <span style={{ textDecoration: "line-through", color: "red" }}>
-                                {values.before}
-                              </span>{" "}
-                              ➝{" "}
-                              <span style={{ color: "green" }}>
-                                {values.after}
-                              </span>
-                            </Typography>
-                          ))}
-                        </Box>
-                      ) : "N/A"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
+  {logs.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage).map(log => (
+    <TableRow key={log.id}>
+      <TableCell>{log.user ? log.user : "Unknown"}</TableCell>
+      <TableCell>{log.action}</TableCell>
+      <TableCell>{formatDate(log.timestamp)}</TableCell>
+      <TableCell>
+  {log.details ? (
+    <Box>
+      {log.action === "Borrowed Item" ? (
+        <>
+          <Typography variant="body2">
+            <strong>Borrower:</strong> {log.details.borrower || "N/A"}
+          </Typography>
+          <Typography variant="body2">
+            <strong>Item:</strong> {log.details.itemName || "N/A"}
+          </Typography>
+          <Typography variant="body2">
+            <strong>Quantity:</strong> {log.details.quantity || "N/A"}
+          </Typography>
+        </>
+      ) : log.action === "Returned Item" ? (
+        <>
+          <Typography variant="body2">
+            <strong>Returned By:</strong> {log.user || "Unknown"} {/* ✅ Show user */}
+          </Typography>
+          <Typography variant="body2">
+            <strong>Item:</strong> {log.details.itemName || "N/A"}
+          </Typography>
+          <Typography variant="body2">
+            <strong>Quantity:</strong> {log.details.quantity || "N/A"}
+          </Typography>
+        </>
+      ) : (
+        <>
+          <Typography variant="body2">
+            <strong>Product:</strong> {log.details.product || "N/A"}
+          </Typography>
+          <Typography variant="body2">
+            <strong>Quantity:</strong> {log.details.qty || "N/A"}
+          </Typography>
+        </>
+      )}
+    </Box>
+  ) : "N/A"}
+</TableCell>
+
+      <TableCell>
+        {log.changes && Object.keys(log.changes).length > 0 ? (
+          <Box sx={{ maxWidth: "250px", overflow: "auto", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+            <Typography variant="body2" fontWeight="bold">Changes:</Typography>
+            {Object.entries(log.changes).map(([field, values]) => (
+              <Typography key={field} variant="body2" sx={{ fontSize: "12px", color: "gray" }}>
+                <strong>{field}:</strong>{" "}
+                <span style={{ textDecoration: "line-through", color: "red" }}>
+                  {values.before}
+                </span>{" "}
+                ➝{" "}
+                <span style={{ color: "green" }}>
+                  {values.after}
+                </span>
+              </Typography>
+            ))}
+          </Box>
+        ) : "N/A"}
+      </TableCell>
+    </TableRow>
+  ))}
+</TableBody>
+
             </Table>
           </TableContainer>
 

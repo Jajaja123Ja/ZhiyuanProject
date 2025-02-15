@@ -12,8 +12,8 @@ import InventoryIcon from "@mui/icons-material/Inventory";
 import ReportIcon from "@mui/icons-material/Assessment";
 import TrackChangesIcon from "@mui/icons-material/TrackChanges";
 import PeopleIcon from "@mui/icons-material/People";
-import RestoreIcon from "@mui/icons-material/Restore"; // ✅ Alternative for HistoryIcon
-// import EventNoteIcon from "@mui/icons-material/EventNote"; // Another alternative
+import RestoreIcon from "@mui/icons-material/Restore";
+import CompareArrowsIcon from "@mui/icons-material/CompareArrows";
 import { useNavigate } from "react-router-dom";
 import { useAuthContext } from "../hooks/useAuthContext";
 
@@ -100,6 +100,12 @@ const Sidebar = ({ isHovered, setIsHovered }) => {
             </ListItemIcon>
             {isHovered && <ListItemText primary="Stock IN and OUT" />}
           </ListItem>
+          <ListItem button onClick={() => navigate("/Checkinout")} sx={{ cursor: "pointer" }}>
+            <ListItemIcon>
+              <CompareArrowsIcon /> {/* 🔄 Ideal for Check IN/OUT */}
+            </ListItemIcon>
+            {isHovered && <ListItemText primary="Check IN and OUT" />}
+          </ListItem>
         </List>
       </Box>
     </Drawer>
@@ -107,3 +113,4 @@ const Sidebar = ({ isHovered, setIsHovered }) => {
 };
 
 export default Sidebar;
+ 

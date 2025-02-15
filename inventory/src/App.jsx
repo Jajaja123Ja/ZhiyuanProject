@@ -13,6 +13,7 @@ import ProtectedRoute from './Components/ProtectedRoute';
 import ManageAccounts from './Pages/ManageAccounts';
 import ActivityLogs from './Pages/ActivityLogs';
 import ExcelUploader from './Components/ExcelUploader';
+import CheckInOut from './Pages/CheckInOut';
 
 function App() {
   return (
@@ -45,6 +46,14 @@ function App() {
           element={
             
               <ManageAccounts />
+            
+          }
+        />
+        <Route
+          path="/Checkinout"
+          element={
+            
+              <CheckInOut />
             
           }
         />
