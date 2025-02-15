@@ -563,10 +563,7 @@ const InventoryTracker = () => {
               <Button variant="contained" onClick={addEntry} sx={{ bgcolor: "#3f5930", color: "white" }}>
                 Add
               </Button>
-            </Box>
-          </Paper>
-          {/* Show "Import In (Delivery)" button only on the "In (Delivery)" tab */}
-{selectedTab === 0 && (
+              {selectedTab === 0 && (
   <Button
     variant="contained"
     component="label"
@@ -576,17 +573,23 @@ const InventoryTracker = () => {
     <input type="file" hidden onChange={handleFileUploadInDelivery} />
   </Button>
 )}
-
 {selectedTab === 2 && (
   <Button
     variant="contained"
     component="label"
     sx={{ bgcolor: "#3f5930", color: "white", mb: 2 }}
   >
-    Import Excel
+    Import In (OutSale)
     <input type="file" hidden onChange={handleFileUpload} />
   </Button>
 )}
+            </Box>
+            
+          </Paper>
+          {/* Show "Import In (Delivery)" button only on the "In (Delivery)" tab */}
+
+
+
           {/* Data Table */}
           <TableContainer component={Paper} sx={{ mt: 2 }}>
             <Table>
